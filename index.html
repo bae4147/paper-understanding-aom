@@ -1164,8 +1164,8 @@ ${paperContent.replace(/<[^>]*>/g, '')}
             if (phase === 'reading') {
                 const showRightPanel = condition === 'with_llm' || condition === 'with_llm_extended';
 
-                // Chat UI Component
-                const ChatUI = () => (
+                // Chat UI - inline JSX to prevent re-mount on re-render
+                const chatUI = (
                     <div className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex-1 overflow-y-auto bg-white">
                             {messages.length === 0 ? (
@@ -1230,8 +1230,8 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                     </div>
                 );
 
-                // Infographics Tab
-                const InfographicsTab = () => (
+                // Infographics Tab - inline JSX
+                const infographicsTab = (
                     <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
                         {resourceContent.infographics ? (
                             <img
@@ -1248,8 +1248,8 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                     </div>
                 );
 
-                // Audio Tab
-                const AudioTab = () => (
+                // Audio Tab - inline JSX
+                const audioTab = (
                     <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
                         {resourceContent.audio ? (
                             <div className="flex flex-col items-center justify-center h-full">
@@ -1268,8 +1268,8 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                     </div>
                 );
 
-                // Simplified Text Tab
-                const SimplifiedTab = () => (
+                // Simplified Text Tab - inline JSX
+                const simplifiedTab = (
                     <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
                         {resourceContent.simplified ? (
                             <div
@@ -1396,10 +1396,10 @@ ${paperContent.replace(/<[^>]*>/g, '')}
 
                                             {/* Tab Content */}
                                             <div className="flex-1 flex flex-col overflow-hidden">
-                                                {activeTab === 'infographics' && <InfographicsTab />}
-                                                {activeTab === 'audio' && <AudioTab />}
-                                                {activeTab === 'simplified' && <SimplifiedTab />}
-                                                {activeTab === 'chat' && <ChatUI />}
+                                                {activeTab === 'infographics' && infographicsTab}
+                                                {activeTab === 'audio' && audioTab}
+                                                {activeTab === 'simplified' && simplifiedTab}
+                                                {activeTab === 'chat' && chatUI}
                                             </div>
                                         </>
                                     ) : (
@@ -1408,7 +1408,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                             <div className="px-4 py-3 border-b bg-white flex items-center justify-between">
                                                 <span className="text-xl font-semibold">AI Assistant</span>
                                             </div>
-                                            <ChatUI />
+                                            {chatUI}
                                         </>
                                     )}
                                 </div>
