@@ -475,8 +475,215 @@
                                 </div>
                             )}
 
-                            {/* LLM Usage Statistics (with_llm only) */}
-                            {selectedExperiment.condition === 'with_llm' && selectedExperiment.llmInteraction && (
+                            {/* Extended Resources Statistics (with_llm_extended only) */}
+                            {selectedExperiment.condition === 'with_llm_extended' && (
+                                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                                    <h2 className="text-xl font-bold mb-4">Extended Resources Usage</h2>
+
+                                    {/* Tab Usage Times */}
+                                    {selectedExperiment.extendedResources?.tabUsageTimes && (
+                                        <div className="mb-6">
+                                            <h3 className="text-md font-semibold mb-3">Tab Usage Distribution</h3>
+                                            {(() => {
+                                                const times = selectedExperiment.extendedResources.tabUsageTimes;
+                                                const total = (times.infographics || 0) + (times.audio || 0) +
+                                                             (times.simplified || 0) + (times.chat || 0);
+
+                                                if (total === 0) return <p className="text-gray-500">No tab usage data</p>;
+
+                                                const tabs = [
+                                                    { name: 'Infographics', key: 'infographics', color: 'bg-blue-500', icon: '📊' },
+                                                    { name: 'Audio', key: 'audio', color: 'bg-green-500', icon: '🎧' },
+                                                    { name: 'Simplified', key: 'simplified', color: 'bg-yellow-500', icon: '📝' },
+                                                    { name: 'Chat', key: 'chat', color: 'bg-purple-500', icon: '💬' }
+                                                ];
+
+                                                return (
+                                                    <>
+                                                        {/* Horizontal stacked bar */}
+                                                        <div className="h-10 bg-gray-200 rounded-lg overflow-hidden flex shadow-sm mb-4">
+                                                            {tabs.map(tab => {
+                                                                const time = times[tab.key] || 0;
+                                                                const percent = (time / total * 100);
+                                                                return (
+                                                                    <div
+                                                                        key={tab.key}
+                                                                        className={`${tab.color} flex items-center justify-center text-white text-xs font-semibold transition-all`}
+                                                                        style={{ width: `${percent}%` }}
+                                                                        title={`${tab.name}: ${(time/1000/60).toFixed(1)}m`}
+                                                                    >
+                                                                        {percent > 10 ? `${tab.icon} ${percent.toFixed(0)}%` : ''}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {/* Stats Grid */}
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                            {tabs.map(tab => {
+                                                                const time = times[tab.key] || 0;
+                                                                const percent = (time / total * 100).toFixed(1);
+                                                                return (
+                                                                    <div key={tab.key} className="p-3 bg-gray-50 rounded-lg text-center">
+                                                                        <div className="text-2xl mb-1">{tab.icon}</div>
+                                                                        <div className="font-semibold text-gray-800">{tab.name}</div>
+                                                                        <div className="text-lg font-bold" style={{color: tab.color.replace('bg-', '').includes('purple') ? '#9333ea' : tab.color.replace('bg-', '').includes('blue') ? '#3b82f6' : tab.color.replace('bg-', '').includes('green') ? '#22c55e' : '#eab308'}}>
+                                                                            {(time / 1000 / 60).toFixed(1)}m
+                                                                        </div>
+                                                                        <div className="text-xs text-gray-500">{percent}%</div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+
+                                    {/* Resources Availability */}
+                                    {selectedExperiment.extendedResources?.resourcesAvailable && (
+                                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                            <h3 className="text-md font-semibold mb-3">Resources Available</h3>
+                                            <div className="flex space-x-4">
+                                                <span className={`px-3 py-1 rounded-full text-sm ${
+                                                    selectedExperiment.extendedResources.resourcesAvailable.infographics
+                                                        ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                    📊 Infographics {selectedExperiment.extendedResources.resourcesAvailable.infographics ? '✓' : '✗'}
+                                                </span>
+                                                <span className={`px-3 py-1 rounded-full text-sm ${
+                                                    selectedExperiment.extendedResources.resourcesAvailable.audio
+                                                        ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                    🎧 Audio {selectedExperiment.extendedResources.resourcesAvailable.audio ? '✓' : '✗'}
+                                                </span>
+                                                <span className={`px-3 py-1 rounded-full text-sm ${
+                                                    selectedExperiment.extendedResources.resourcesAvailable.simplified
+                                                        ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                    📝 Simplified {selectedExperiment.extendedResources.resourcesAvailable.simplified ? '✓' : '✗'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Audio Interactions */}
+                                    {(() => {
+                                        const audioEvents = selectedExperiment.events.filter(e =>
+                                            e.eventType === 'audio_play' ||
+                                            e.eventType === 'audio_pause' ||
+                                            e.eventType === 'audio_ended' ||
+                                            e.eventType === 'audio_seeked'
+                                        );
+
+                                        if (audioEvents.length === 0) return null;
+
+                                        const playCount = audioEvents.filter(e => e.eventType === 'audio_play').length;
+                                        const pauseCount = audioEvents.filter(e => e.eventType === 'audio_pause').length;
+                                        const endedCount = audioEvents.filter(e => e.eventType === 'audio_ended').length;
+                                        const seekCount = audioEvents.filter(e => e.eventType === 'audio_seeked').length;
+
+                                        return (
+                                            <div className="mb-6 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                                                <h3 className="text-md font-semibold mb-3">🎧 Audio Interactions</h3>
+                                                <div className="grid grid-cols-4 gap-4 text-center">
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-green-600">{playCount}</div>
+                                                        <div className="text-xs text-gray-600">Play</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-yellow-600">{pauseCount}</div>
+                                                        <div className="text-xs text-gray-600">Pause</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-blue-600">{seekCount}</div>
+                                                        <div className="text-xs text-gray-600">Seek</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-purple-600">{endedCount}</div>
+                                                        <div className="text-xs text-gray-600">Completed</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Audio event timeline */}
+                                                <details className="mt-4">
+                                                    <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                                                        Show audio event timeline ({audioEvents.length} events)
+                                                    </summary>
+                                                    <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                                                        {audioEvents
+                                                            .sort((a, b) => a.timestamp - b.timestamp)
+                                                            .map((event, idx) => (
+                                                                <div key={idx} className="p-2 bg-white rounded text-xs flex justify-between items-center">
+                                                                    <span className="font-medium">
+                                                                        {event.eventType === 'audio_play' && '▶️ Play'}
+                                                                        {event.eventType === 'audio_pause' && '⏸️ Pause'}
+                                                                        {event.eventType === 'audio_seeked' && '⏩ Seek'}
+                                                                        {event.eventType === 'audio_ended' && '🏁 Ended'}
+                                                                    </span>
+                                                                    <span className="text-gray-500">
+                                                                        {event.currentTime !== undefined && `@ ${event.currentTime.toFixed(1)}s`}
+                                                                    </span>
+                                                                    <span className="text-gray-400">
+                                                                        {new Date(event.timestamp).toLocaleTimeString()}
+                                                                    </span>
+                                                                </div>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Tab Switch Events */}
+                                    {(() => {
+                                        const tabSwitchEvents = selectedExperiment.events.filter(e => e.eventType === 'resource_tab_switch');
+
+                                        if (tabSwitchEvents.length === 0) return null;
+
+                                        return (
+                                            <div className="p-4 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+                                                <h3 className="text-md font-semibold mb-3">🔄 Tab Switch Activity</h3>
+                                                <div className="text-center mb-4">
+                                                    <div className="text-3xl font-bold text-indigo-600">{tabSwitchEvents.length}</div>
+                                                    <div className="text-sm text-gray-600">Total Tab Switches</div>
+                                                </div>
+
+                                                <details>
+                                                    <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                                                        Show tab switch timeline
+                                                    </summary>
+                                                    <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                                                        {tabSwitchEvents
+                                                            .sort((a, b) => a.timestamp - b.timestamp)
+                                                            .map((event, idx) => (
+                                                                <div key={idx} className="p-2 bg-white rounded text-xs flex justify-between items-center">
+                                                                    <span>
+                                                                        <span className="font-medium">{event.from}</span>
+                                                                        <span className="mx-2">→</span>
+                                                                        <span className="font-medium">{event.to}</span>
+                                                                    </span>
+                                                                    <span className="text-gray-500">
+                                                                        {event.timeOnPreviousTab && `${(event.timeOnPreviousTab/1000).toFixed(1)}s on ${event.from}`}
+                                                                    </span>
+                                                                    <span className="text-gray-400">
+                                                                        {new Date(event.timestamp).toLocaleTimeString()}
+                                                                    </span>
+                                                                </div>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* LLM Usage Statistics (with_llm and with_llm_extended) */}
+                            {(selectedExperiment.condition === 'with_llm' || selectedExperiment.condition === 'with_llm_extended') && selectedExperiment.llmInteraction && (
                                 <div className="bg-white rounded-lg shadow p-6 mb-6">
                                     <h2 className="text-xl font-bold mb-4">LLM Usage Statistics</h2>
                                     
@@ -1064,6 +1271,11 @@
                                                             <td className="px-4 py-2 text-xs text-gray-500">
                                                                 {event.isTabSwitch && '🔄 Tab Switch'}
                                                                 {event.isFinalSegment && '🏁 Final'}
+                                                                {event.eventType === 'audio_play' && '▶️'}
+                                                                {event.eventType === 'audio_pause' && '⏸️'}
+                                                                {event.eventType === 'audio_seeked' && `⏩ @${event.currentTime?.toFixed(1)}s`}
+                                                                {event.eventType === 'audio_ended' && '🏁 Audio Done'}
+                                                                {event.eventType === 'resource_tab_switch' && `🔄 ${event.from}→${event.to}`}
                                                             </td>
                                                         </tr>
                                                     );
@@ -1131,9 +1343,11 @@
                                             <td className="px-6 py-4">{exp.participantId}</td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-1 rounded text-xs ${
-                                                    exp.condition === 'with_llm' 
-                                                        ? 'bg-purple-100 text-purple-800' 
-                                                        : 'bg-gray-100 text-gray-800'
+                                                    exp.condition === 'with_llm_extended'
+                                                        ? 'bg-indigo-100 text-indigo-800'
+                                                        : exp.condition === 'with_llm'
+                                                            ? 'bg-purple-100 text-purple-800'
+                                                            : 'bg-gray-100 text-gray-800'
                                                 }`}>
                                                     {exp.condition}
                                                 </span>
