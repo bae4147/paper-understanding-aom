@@ -31,8 +31,8 @@ jobs:
           echo "Before injection:"
           grep "const apiKey" index.html || echo "Pattern not found"
 
-          # Use sed with environment variable to avoid special character issues
-          sed -i "s|__OPENAI_API_KEY__|${OPENAI_API_KEY}|g" index.html
+          # Use awk for safe replacement with special characters
+          awk -v key="$OPENAI_API_KEY" '{gsub(/__OPENAI_API_KEY__/, key); print}' index.html > index.html.tmp && mv index.html.tmp index.html
 
           echo "After injection:"
           grep "const apiKey" index.html || echo "Pattern not found"
