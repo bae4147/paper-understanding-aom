@@ -25,12 +25,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Inject API Key into index.html
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "Before injection:"
           grep "const apiKey" index.html || echo "Pattern not found"
 
-          # Use perl for reliable replacement
-          perl -i -pe "s/__OPENAI_API_KEY__/${{ secrets.OPENAI_API_KEY }}/g" index.html
+          # Use sed with environment variable to avoid special character issues
+          sed -i "s|__OPENAI_API_KEY__|${OPENAI_API_KEY}|g" index.html
 
           echo "After injection:"
           grep "const apiKey" index.html || echo "Pattern not found"
