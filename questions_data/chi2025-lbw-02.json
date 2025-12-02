@@ -1,0 +1,109 @@
+{
+  "paperId": "chi2025-lbw-02",
+  "paperTitle": "Exploring Older Adults Personality Preferences for LLM-powered Conversational Companions",
+  "questions": [
+    {
+      "id": 1,
+      "type": "multiple_choice",
+      "question": "연구에서 실험한 CA(Conversational Agent)의 3가지 성격(personality) 유형은 무엇인가?",
+      "options": [
+        "Extroversion, Agreeableness, Conscientiousness",
+        "Openness, Neuroticism, Agreeableness",
+        "Extroversion, Neuroticism, Openness",
+        "Openness, Conscientiousness, Agreeableness"
+      ],
+      "correctAnswer": "Extroversion, Agreeableness, Conscientiousness",
+      "section": "Methods"
+    },
+    {
+      "id": 2,
+      "type": "multiple_choice",
+      "question": "연구자가 Neuroticism과 Openness를 제외한 이유로 옳은 것은?",
+      "options": [
+        "Neuroticism과 Openness가 노년층에게 부정적 감정을 유발하기 때문",
+        "Neuroticism은 사회적 동반자에게 부적합하고, Openness는 Extroversion과 높은 상관을 가지기 때문",
+        "두 성격은 LLM으로 구현이 불가능하기 때문",
+        "데이터가 충분하지 않아 제외했기 때문"
+      ],
+      "correctAnswer": "Neuroticism은 사회적 동반자에게 부적합하고, Openness는 Extroversion과 높은 상관을 가지기 때문",
+      "section": "Methods"
+    },
+    {
+      "id": 3,
+      "type": "multiple_choice",
+      "question": "Agreeable CA가 장기 사용 시 참가자들에게 덜 선호된 주요 이유는 무엇인가?",
+      "options": [
+        "너무 공격적이었다",
+        "대화 주제를 자주 바꾸었다",
+        "사용자의 말을 반복하고 지나치게 동의하여 '진짜 대화'처럼 느껴지지 않았기 때문",
+        "발화 속도가 너무 빨랐기 때문"
+      ],
+      "correctAnswer": "사용자의 말을 반복하고 지나치게 동의하여 '진짜 대화'처럼 느껴지지 않았기 때문",
+      "section": "Results"
+    },
+    {
+      "id": 4,
+      "type": "multiple_choice",
+      "question": "Extroverted CA에 대해 참가자들이 가장 긍정적으로 평가한 특징은?",
+      "options": [
+        "높은 정확도",
+        "창의성과 자발성(spontaneity)",
+        "짧은 대화 유지 능력",
+        "무미건조한 톤"
+      ],
+      "correctAnswer": "창의성과 자발성(spontaneity)",
+      "section": "Results"
+    },
+    {
+      "id": 5,
+      "type": "multiple_choice",
+      "question": "연구에서 참가자들이 Conscientious CA를 가장 낮게 평가한 이유는?",
+      "options": [
+        "너무 시끄러운 목소리를 사용했기 때문",
+        "지나치게 많은 질문을 했기 때문",
+        "덜 인간적이고 '무관심해 보이는' 성향을 보였기 때문",
+        "정보 제공이 너무 많았기 때문"
+      ],
+      "correctAnswer": "덜 인간적이고 '무관심해 보이는' 성향을 보였기 때문",
+      "section": "Results"
+    },
+    {
+      "id": 6,
+      "type": "short_answer",
+      "question": "연구의 RQ(Research Question) 두 가지를 모두 작성하시오.",
+      "correctAnswer": [
+        "Older adults가 LLM 기반 음성 CA의 서로 다른 성격 특성을 어떻게 지각하는가?",
+        "서로 다른 성격이 사용 경험에 어떤 영향을 미치는가?"
+      ],
+      "section": "Introduction"
+    },
+    {
+      "id": 7,
+      "type": "short_answer",
+      "question": "연구의 Phase 1에서 동일한 이야기를 반복하게 한 이유는 무엇인가?",
+      "correctAnswer": "세 CA와의 대화를 동일한 스토리 기반에서 비교하여 조건 간 일관성을 유지하기 위해서이다.",
+      "section": "Methods"
+    },
+    {
+      "id": 8,
+      "type": "short_answer",
+      "question": "연구에서 사용한 'Personality Prompting (P2)' 방법의 목적은 무엇인가?",
+      "correctAnswer": "LLM에게 특정 성격 특성이 나타나도록 심리학 기반 키워드를 활용한 프롬프트로 성격을 유도하기 위함이다.",
+      "section": "Methods"
+    },
+    {
+      "id": 9,
+      "type": "short_answer",
+      "question": "참가자들이 Agreeable CA를 'sycophantic(아부하는 듯)'하다고 평가한 이유는 무엇인가?",
+      "correctAnswer": "사용자의 말을 과도하게 반복·동의하여 새로운 정보나 관점을 제공하지 않았기 때문이다.",
+      "section": "Results"
+    },
+    {
+      "id": 10,
+      "type": "short_answer",
+      "question": "참가자들이 Extroverted CA를 더 '인간처럼' 느꼈던 구체적 이유를 한 가지 서술하시오.",
+      "correctAnswer": "예상치 못한 창의적·유머러스한 응답(예: 'Sparky라고 불러도 된다')을 보여 자발성이 느껴졌기 때문이다.",
+      "section": "Results"
+    }
+  ]
+}

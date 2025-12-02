@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Experiment - AOM</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Papers data -->
+    <script src="papers-data.js"></script>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // TODO: Replace with your new Firebase project credentials
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Make Firebase available globally
+        window.firebaseDb = db;
+        window.firebaseCollection = collection;
+        window.firebaseAddDoc = addDoc;
+        window.firebaseDoc = doc;
+        window.firebaseGetDoc = getDoc;
+        window.firebaseSetDoc = setDoc;
+        window.firebaseUpdateDoc = updateDoc;
+        window.firebaseServerTimestamp = serverTimestamp;
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Icons
+        const SendIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+        );
+
+        const ClockIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        );
+
+        const CheckIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        );
+
+        // Timer Component
+        function Timer({ seconds, onComplete, isActive, phase }) {
+            const [timeLeft, setTimeLeft] = useState(seconds);
+
+            useEffect(() => {
+                setTimeLeft(seconds);
+            }, [phase, seconds]);
+
+            useEffect(() => {
+                if (!isActive) return;
+
+                const interval = setInterval(() => {
+                    setTimeLeft(prev => {
+                        if (prev <= 1) {
+                            clearInterval(interval);
+                            if (onComplete) onComplete();
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+
+                return () => clearInterval(interval);
+            }, [isActive, onComplete]);
+
+            const minutes = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            const isLowTime = timeLeft < 300;
+
+            return (
+                <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-mono text-lg ${
+                    isLowTime ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                }`}>
+                    <ClockIcon />
+                    <span>{String(minutes).padStart(2, '0')}:{String(secs).padStart(2, '0')}</span>
+                </div>
+            );
+        }
+
+        // Main Application Component
+        function ReadingExperimentAOM() {
+            // Experiment flow state
+            const [phase, setPhase] = useState('setup'); // setup, reading-guide, reading, quiz-guide, quiz, review-guide, review, complete
+            const [participantId, setParticipantId] = useState('');
+            const [condition, setCondition] = useState('without_llm'); // without_llm, with_llm, with_llm_extended
+            const [currentPaper, setCurrentPaper] = useState('');
+            const [sessionId] = useState(`session_${Date.now()}`);
+            const [showFinishPopup, setShowFinishPopup] = useState(false);
+
+            // Reading phase state
+            const [scrollPosition, setScrollPosition] = useState(0);
+            const [currentSection, setCurrentSection] = useState('Introduction');
+            const [selectedText, setSelectedText] = useState('');
+            const [readingActive, setReadingActive] = useState(false);
+            const [paperContent, setPaperContent] = useState('');
+
+            // Focus state (for with_llm conditions)
+            const [activeFocus, setActiveFocus] = useState('reading'); // 'reading' or 'chat'
+            const [focusTimes, setFocusTimes] = useState({ reading: 0, chat: 0 });
+            const focusStartTimeRef = useRef(Date.now());
+
+            // Right panel tab state (for with_llm_extended)
+            const [activeTab, setActiveTab] = useState('chat'); // 'infographics', 'audio', 'simplified', 'chat'
+
+            // Resource state for extended condition
+            const [resourceContent, setResourceContent] = useState({
+                infographics: null,
+                audio: null,
+                simplified: null
+            });
+
+            // Quiz phase state
+            const [quizActive, setQuizActive] = useState(false);
+            const [quizAnswers, setQuizAnswers] = useState({});
+
+            // Review phase state
+            const [reviewActive, setReviewActive] = useState(false);
+            const [reviewData, setReviewData] = useState({
+                rating: 0,
+                strengths: '',
+                weaknesses: '',
+                suggestions: ''
+            });
+
+            // Chat state (for LLM conditions)
+            const [messages, setMessages] = useState([]);
+            const [inputMessage, setInputMessage] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [chatHistory, setChatHistory] = useState([]);
+            const chatMessagesEndRef = useRef(null);
+            const textareaRef = useRef(null);
+
+            // Timer tracking
+            const phaseStartTime = useRef(Date.now());
+            const phaseTimers = useRef({
+                reading: 0,
+                quiz: 0,
+                review: 0
+            });
+
+            // Logging state
+            const [events, setEvents] = useState([]);
+            const lastEventTime = useRef(Date.now());
+            const unsavedEventsCount = useRef(0);
+            const eventIdCounter = useRef(0);
+            const isSaving = useRef(false);
+            const pdfContainerRef = useRef(null);
+            const scrollTimeoutRef = useRef(null);
+            const lastActivityTimeRef = useRef(Date.now());
+            const scrollStartTimeRef = useRef(null);
+            const isScrollingRef = useRef(false);
+            const sectionBeforeScrollRef = useRef('Introduction');
+
+            // LLM typing tracking
+            const isTypingRef = useRef(false);
+            const typingTimeoutRef = useRef(null);
+            const lastTypingActivityRef = useRef(Date.now());
+
+            // Papers - use from shared data file
+            const papers = typeof AVAILABLE_PAPERS !== 'undefined' ? AVAILABLE_PAPERS : [];
+
+            // Quiz questions state
+            const [quizQuestions, setQuizQuestions] = useState([
+                {
+                    id: 1,
+                    question: "Sample question 1?",
+                    options: ["Option A", "Option B", "Option C", "Option D"],
+                    type: "multiple_choice"
+                },
+                {
+                    id: 2,
+                    question: "Sample question 2?",
+                    type: "short_answer"
+                },
+            ]);
+
+            // Section boundaries
+            const [sectionBoundaries, setSectionBoundaries] = useState({
+                'Abstract': { start: 0, end: 200 },
+                'Introduction': { start: 200, end: 800 },
+            });
+
+            // Load resources for extended condition
+            useEffect(() => {
+                if (condition === 'with_llm_extended' && currentPaper) {
+                    // Load infographics
+                    const infographicPath = `papers_resources/${currentPaper}/infographic.png`;
+                    fetch(infographicPath)
+                        .then(res => {
+                            if (res.ok) {
+                                setResourceContent(prev => ({ ...prev, infographics: infographicPath }));
+                            }
+                        })
+                        .catch(() => {});
+
+                    // Load audio
+                    const audioPath = `papers_resources/${currentPaper}/audio.mp3`;
+                    fetch(audioPath)
+                        .then(res => {
+                            if (res.ok) {
+                                setResourceContent(prev => ({ ...prev, audio: audioPath }));
+                            }
+                        })
+                        .catch(() => {});
+
+                    // Load simplified text
+                    fetch(`papers_resources/${currentPaper}/simplified.html`)
+                        .then(res => {
+                            if (res.ok) return res.text();
+                            return null;
+                        })
+                        .then(html => {
+                            if (html) {
+                                setResourceContent(prev => ({ ...prev, simplified: html }));
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }, [condition, currentPaper]);
+
+            // Prevent back navigation during experiment
+            useEffect(() => {
+                window.history.pushState(null, '', window.location.href);
+
+                const handlePopState = (e) => {
+                    window.history.pushState(null, '', window.location.href);
+                    const confirmBack = window.confirm(
+                        '뒤로 가시겠습니까?\n\n뒤로 가시면 현재까지의 진행 상황이 저장되지 않습니다.'
+                    );
+                    if (confirmBack) {
+                        window.history.back();
+                    }
+                };
+
+                window.addEventListener('popstate', handlePopState);
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, []);
+
+            // Auto-save on browser close
+            useEffect(() => {
+                const handleBeforeUnload = (e) => {
+                    if (phase === 'reading' && unsavedEventsCount.current > 0) {
+                        saveEventsToFirebase(events, false);
+                    }
+                    if (phase === 'reading' || phase === 'quiz' || phase === 'review') {
+                        e.preventDefault();
+                        e.returnValue = '';
+                        return '';
+                    }
+                };
+
+                window.addEventListener('beforeunload', handleBeforeUnload);
+                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+            }, [phase, events]);
+
+            // Auto-scroll chat to bottom
+            useEffect(() => {
+                if (chatMessagesEndRef.current) {
+                    chatMessagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, [messages, isLoading]);
+
+            // Create experiment document
+            useEffect(() => {
+                const createExperimentDoc = async () => {
+                    if (phase === 'reading-guide' && participantId && sessionId && currentPaper) {
+                        try {
+                            if (window.firebaseDb) {
+                                const experimentRef = window.firebaseDoc(
+                                    window.firebaseDb,
+                                    `users/${participantId}/experiments/${sessionId}`
+                                );
+
+                                await window.firebaseSetDoc(experimentRef, {
+                                    participantId,
+                                    sessionId,
+                                    condition,
+                                    paper: currentPaper,
+                                    startedAt: window.firebaseServerTimestamp(),
+                                    status: 'in_progress',
+                                    createdAt: Date.now()
+                                });
+
+                                console.log('✅ Experiment document created');
+                            }
+                        } catch (error) {
+                            console.error('❌ Failed to create experiment document:', error);
+                        }
+                    }
+                };
+                createExperimentDoc();
+            }, [phase]);
+
+            // Calculate section boundaries when entering reading phase
+            useEffect(() => {
+                if (phase === 'reading' && paperContent) {
+                    setTimeout(() => {
+                        const sections = document.querySelectorAll('[data-section]');
+                        const container = document.getElementById('paper-content') || document.querySelector('.prose');
+
+                        if (sections.length > 0 && container) {
+                            const newBoundaries = {};
+                            sections.forEach((section, index) => {
+                                const sectionName = section.getAttribute('data-section');
+                                const sectionTop = section.offsetTop;
+                                let sectionEnd = index < sections.length - 1
+                                    ? sections[index + 1].offsetTop
+                                    : container.scrollHeight;
+
+                                newBoundaries[sectionName] = { start: sectionTop, end: sectionEnd };
+                            });
+                            setSectionBoundaries(newBoundaries);
+                            const firstSection = Object.keys(newBoundaries)[0];
+                            if (firstSection) setCurrentSection(firstSection);
+                        }
+                    }, 500);
+                }
+            }, [phase, paperContent]);
+
+            // Save events to Firebase
+            const saveEventsToFirebase = async (eventsBatch, isPartialSave = true) => {
+                if (isSaving.current) return false;
+                isSaving.current = true;
+
+                try {
+                    if (!window.firebaseDb || !participantId || !sessionId) {
+                        isSaving.current = false;
+                        return false;
+                    }
+
+                    const experimentRef = window.firebaseDoc(
+                        window.firebaseDb,
+                        `users/${participantId}/experiments/${sessionId}`
+                    );
+
+                    const readingEvents = eventsBatch.filter(e =>
+                        e.phase === 'reading' &&
+                        (e.eventType === 'scroll_action' ||
+                         e.eventType === 'focus_switch' ||
+                         e.eventType === 'tab_switch' ||
+                         e.eventType === 'llm_activity' ||
+                         e.eventType === 'text_selection' ||
+                         e.eventType === 'resource_tab_switch')
+                    );
+
+                    if (readingEvents.length === 0) {
+                        isSaving.current = false;
+                        return true;
+                    }
+
+                    const docSnap = await window.firebaseGetDoc(experimentRef);
+                    const existingEvents = docSnap.exists() && docSnap.data().reading?.events
+                        ? docSnap.data().reading.events
+                        : [];
+
+                    const existingKeys = new Set(
+                        existingEvents.map(e => e.eventId || `${e.timestamp}_${e.eventType}`)
+                    );
+                    const newEventsOnly = readingEvents.filter(e => {
+                        const key = e.eventId || `${e.timestamp}_${e.eventType}`;
+                        return !existingKeys.has(key);
+                    });
+
+                    if (newEventsOnly.length === 0) {
+                        unsavedEventsCount.current = 0;
+                        isSaving.current = false;
+                        return true;
+                    }
+
+                    const mergedEvents = [...existingEvents, ...newEventsOnly].sort((a, b) => a.timestamp - b.timestamp);
+
+                    await window.firebaseUpdateDoc(experimentRef, {
+                        'reading.events': mergedEvents,
+                        'reading.lastAutoSave': window.firebaseServerTimestamp(),
+                        'reading.totalEvents': mergedEvents.length
+                    });
+
+                    if (isPartialSave) {
+                        console.log(`💾 Auto-saved ${newEventsOnly.length} events (total: ${mergedEvents.length})`);
+                    }
+
+                    unsavedEventsCount.current = 0;
+                    isSaving.current = false;
+                    return true;
+                } catch (error) {
+                    console.error('❌ Auto-save failed:', error);
+                    isSaving.current = false;
+                    return false;
+                }
+            };
+
+            // Log event
+            const logEvent = async (eventType, additionalData = {}) => {
+                const now = Date.now();
+                const timeSinceLast = now - lastEventTime.current;
+
+                eventIdCounter.current++;
+                const eventId = `${sessionId}_${eventIdCounter.current}`;
+
+                const event = {
+                    eventId,
+                    timestamp: now,
+                    eventType,
+                    phase,
+                    timeSinceLast,
+                    participantId,
+                    sessionId,
+                    condition,
+                    paper: currentPaper,
+                    ...additionalData
+                };
+
+                setEvents(prev => {
+                    const newEvents = [...prev, event];
+
+                    if (phase === 'reading') {
+                        unsavedEventsCount.current++;
+                        if (unsavedEventsCount.current >= 20) {
+                            saveEventsToFirebase(newEvents, true);
+                        }
+                    }
+
+                    return newEvents;
+                });
+                lastEventTime.current = now;
+
+                // Local storage backup
+                const storedEvents = JSON.parse(localStorage.getItem('experimentEvents_aom') || '[]');
+                storedEvents.push(event);
+                localStorage.setItem('experimentEvents_aom', JSON.stringify(storedEvents));
+            };
+
+            // Get current section based on viewport center
+            const getCurrentSection = (scrollY, viewportHeight) => {
+                const viewportCenter = scrollY + (viewportHeight / 2);
+
+                for (const [section, bounds] of Object.entries(sectionBoundaries)) {
+                    if (viewportCenter >= bounds.start && viewportCenter < bounds.end) {
+                        return section;
+                    }
+                }
+                return Object.keys(sectionBoundaries)[0] || 'Unknown';
+            };
+
+            // Tab switching with time tracking
+            const switchFocus = (newFocus) => {
+                if (newFocus === activeFocus) return;
+
+                const now = Date.now();
+
+                if (activeFocus === 'chat') {
+                    const activityDuration = now - lastTypingActivityRef.current;
+                    const classification = isTypingRef.current ? 'typing' : 'none-typing';
+
+                    if (typingTimeoutRef.current) {
+                        clearTimeout(typingTimeoutRef.current);
+                        typingTimeoutRef.current = null;
+                    }
+
+                    logEvent('llm_activity', {
+                        classification,
+                        duration: activityDuration,
+                        isFocusSwitch: true
+                    });
+
+                    isTypingRef.current = false;
+                }
+
+                if (newFocus === 'chat' && activeFocus === 'reading') {
+                    const pauseDuration = now - lastActivityTimeRef.current;
+                    let classification = pauseDuration > 5000 ? 'reading' : (pauseDuration > 2000 ? 'scanning' : 'scrolling');
+
+                    logEvent('scroll_action', {
+                        scrollY: pdfContainerRef.current?.scrollTop || 0,
+                        sectionBeforeScroll: currentSection,
+                        sectionAfterScroll: currentSection,
+                        classification,
+                        pauseDuration,
+                        scrollDuration: 0,
+                        isFocusSwitch: true,
+                        timestamp: now
+                    });
+
+                    lastTypingActivityRef.current = now;
+                    isTypingRef.current = false;
+                }
+
+                if (newFocus === 'reading' && activeFocus === 'chat') {
+                    lastActivityTimeRef.current = now;
+                }
+
+                const elapsed = Date.now() - focusStartTimeRef.current;
+                setFocusTimes(prev => ({
+                    ...prev,
+                    [activeFocus]: prev[activeFocus] + elapsed
+                }));
+
+                logEvent('focus_switch', {
+                    from: activeFocus,
+                    to: newFocus,
+                    timeOnPreviousFocus: elapsed
+                });
+
+                setActiveFocus(newFocus);
+                focusStartTimeRef.current = Date.now();
+            };
+
+            // Handle resource tab switch (for extended condition)
+            const handleTabSwitch = (newTab) => {
+                if (newTab === activeTab) return;
+
+                logEvent('resource_tab_switch', {
+                    from: activeTab,
+                    to: newTab,
+                    timestamp: Date.now()
+                });
+
+                setActiveTab(newTab);
+            };
+
+            // Handle typing in Chat
+            const handleTyping = () => {
+                if (activeFocus !== 'chat') return;
+
+                const now = Date.now();
+
+                if (!isTypingRef.current) {
+                    const noneTypingDuration = now - lastTypingActivityRef.current;
+                    if (noneTypingDuration > 100) {
+                        logEvent('llm_activity', {
+                            classification: 'none-typing',
+                            duration: noneTypingDuration
+                        });
+                    }
+                    isTypingRef.current = true;
+                    lastTypingActivityRef.current = now;
+                }
+
+                if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                }
+
+                typingTimeoutRef.current = setTimeout(() => {
+                    const stopTime = Date.now();
+                    const typingDuration = stopTime - lastTypingActivityRef.current;
+
+                    logEvent('llm_activity', {
+                        classification: 'typing',
+                        duration: typingDuration
+                    });
+
+                    isTypingRef.current = false;
+                    lastTypingActivityRef.current = stopTime;
+                }, 2000);
+            };
+
+            // Handle key press in chat input
+            const handleChatKeyDown = (e) => {
+                handleTyping();
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (inputMessage.trim()) {
+                        e.target.form.requestSubmit();
+                    }
+                }
+            };
+
+            // Auto-resize textarea
+            const handleTextareaChange = (e) => {
+                setInputMessage(e.target.value);
+                e.target.style.height = 'auto';
+                const lineHeight = 24;
+                const maxLines = 11;
+                const maxHeight = lineHeight * maxLines;
+                const newHeight = Math.min(e.target.scrollHeight, maxHeight);
+                e.target.style.height = newHeight + 'px';
+            };
+
+            // Handle scroll
+            const handleScroll = (e) => {
+                if (activeFocus !== 'reading') return;
+
+                const scrollY = e.target.scrollTop;
+                const viewportHeight = e.target.clientHeight;
+                setScrollPosition(scrollY);
+
+                const newSection = getCurrentSection(scrollY, viewportHeight);
+                if (newSection !== currentSection) {
+                    setCurrentSection(newSection);
+                }
+
+                const now = Date.now();
+
+                if (!isScrollingRef.current) {
+                    isScrollingRef.current = true;
+                    scrollStartTimeRef.current = now;
+                    sectionBeforeScrollRef.current = currentSection;
+
+                    if (lastActivityTimeRef.current === 0) {
+                        lastActivityTimeRef.current = now;
+                    }
+                }
+
+                if (scrollTimeoutRef.current) {
+                    clearTimeout(scrollTimeoutRef.current);
+                }
+
+                scrollTimeoutRef.current = setTimeout(() => {
+                    const scrollStopTime = Date.now();
+                    const scrollDuration = scrollStopTime - scrollStartTimeRef.current;
+                    const pauseBeforeScroll = scrollStartTimeRef.current - lastActivityTimeRef.current;
+
+                    let classification = pauseBeforeScroll > 5000 ? 'reading' : (pauseBeforeScroll > 2000 ? 'scanning' : 'scrolling');
+
+                    logEvent('scroll_action', {
+                        scrollY,
+                        sectionBeforeScroll: sectionBeforeScrollRef.current,
+                        sectionAfterScroll: newSection,
+                        classification,
+                        pauseDuration: pauseBeforeScroll,
+                        scrollDuration,
+                        timestamp: scrollStopTime
+                    });
+
+                    lastActivityTimeRef.current = scrollStopTime;
+                    isScrollingRef.current = false;
+                }, 200);
+            };
+
+            // Handle text selection
+            const handleTextSelection = () => {
+                const selection = window.getSelection();
+                const text = selection.toString();
+                if (text.length > 0) {
+                    setSelectedText(text);
+                    logEvent('text_selection', { selectedText: text });
+                }
+            };
+
+            // Send LLM message
+            const handleSendMessage = async (e) => {
+                e.preventDefault();
+                if (!inputMessage.trim()) return;
+
+                const apiKey = '__OPENAI_API_KEY__';
+                const questionTime = Date.now();
+
+                const userMessage = {
+                    role: 'user',
+                    content: inputMessage,
+                    timestamp: questionTime
+                };
+
+                setMessages(prev => [...prev, userMessage]);
+                logEvent('llm_question_asked', { question: inputMessage, timestamp: questionTime });
+
+                setIsLoading(true);
+                const queryText = inputMessage;
+                setInputMessage('');
+
+                if (textareaRef.current) {
+                    textareaRef.current.style.height = 'auto';
+                }
+
+                try {
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: 'gpt-4o-mini',
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: `You are an expert research assistant helping a researcher understand an academic paper.
+
+**Paper Content:**
+${paperContent.replace(/<[^>]*>/g, '')}
+
+**Your Role:**
+- Provide clear, accurate, and insightful answers based on the paper
+- Use specific examples and details from the paper when relevant
+- If information is not in the paper, clearly state that
+- Use Korean if the user asks in Korean, English if they ask in English`
+                                },
+                                ...messages.map(msg => ({
+                                    role: msg.role,
+                                    content: msg.content
+                                })),
+                                { role: 'user', content: queryText }
+                            ],
+                            max_tokens: 16384,
+                            temperature: 0.5
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error?.message || 'API request failed');
+                    }
+
+                    const data = await response.json();
+                    const assistantResponse = data.choices[0].message.content;
+                    const answerTime = Date.now();
+
+                    const assistantMessage = {
+                        role: 'assistant',
+                        content: assistantResponse,
+                        timestamp: answerTime
+                    };
+
+                    setMessages(prev => [...prev, assistantMessage]);
+
+                    setChatHistory(prev => [...prev, {
+                        question: queryText,
+                        questionTime,
+                        answer: assistantResponse,
+                        answerTime,
+                        responseTime: answerTime - questionTime
+                    }]);
+
+                    logEvent('llm_answer_received', {
+                        question: queryText,
+                        answer: assistantResponse,
+                        responseTime: answerTime - questionTime,
+                        timestamp: answerTime
+                    });
+                } catch (error) {
+                    console.error('Error calling OpenAI API:', error);
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `Error: ${error.message}`,
+                        timestamp: Date.now()
+                    }]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            // Simple markdown renderer
+            const renderMarkdown = (text) => {
+                if (!text) return '';
+                let html = text;
+                html = html.replace(/```([^`]+)```/g, '<pre style="background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0;"><code>$1</code></pre>');
+                html = html.replace(/`([^`]+)`/g, '<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">$1</code>');
+                html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+                html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+                html = html.replace(/^### (.+)$/gm, '<h3 style="font-size: 1.1em; font-weight: 600; margin: 12px 0 8px 0;">$1</h3>');
+                html = html.replace(/^## (.+)$/gm, '<h2 style="font-size: 1.2em; font-weight: 600; margin: 12px 0 8px 0;">$1</h2>');
+                html = html.replace(/^# (.+)$/gm, '<h1 style="font-size: 1.3em; font-weight: 600; margin: 12px 0 8px 0;">$1</h1>');
+                html = html.replace(/^[\-\*] (.+)$/gm, '<li style="margin-left: 20px;">$1</li>');
+                html = html.replace(/\n/g, '<br>');
+                return html;
+            };
+
+            // Start experiment
+            const startExperiment = async () => {
+                if (!participantId || !currentPaper) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                const paper = papers.find(p => p.id === currentPaper);
+                if (paper && paper.url) {
+                    try {
+                        const response = await fetch(paper.url);
+                        const html = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const proseDiv = doc.querySelector('.prose');
+
+                        if (proseDiv) {
+                            setPaperContent(proseDiv.innerHTML);
+
+                            // Load quiz questions
+                            fetch(`questions_data/${currentPaper}.json`)
+                                .then(res => res.ok ? res.json() : null)
+                                .then(data => {
+                                    if (data && data.questions) {
+                                        setQuizQuestions(data.questions);
+                                    }
+                                })
+                                .catch(() => {});
+                        } else {
+                            setPaperContent('<p>Error: Could not load paper content</p>');
+                        }
+                    } catch (error) {
+                        console.error('Error loading paper:', error);
+                        setPaperContent('<p>Error loading paper.</p>');
+                    }
+                }
+
+                setPhase('reading-guide');
+                logEvent('reading_guide_shown');
+            };
+
+            // Complete reading phase
+            const completeReading = async () => {
+                setReadingActive(false);
+
+                const now = Date.now();
+                let finalEvent = null;
+
+                if (activeFocus === 'reading') {
+                    const finalPauseDuration = now - lastActivityTimeRef.current;
+                    let finalClassification = finalPauseDuration > 5000 ? 'reading' : (finalPauseDuration > 2000 ? 'scanning' : 'scrolling');
+
+                    eventIdCounter.current++;
+                    finalEvent = {
+                        eventId: `${sessionId}_${eventIdCounter.current}`,
+                        timestamp: now,
+                        eventType: 'scroll_action',
+                        phase: 'reading',
+                        participantId,
+                        sessionId,
+                        condition,
+                        paper: currentPaper,
+                        scrollY: pdfContainerRef.current?.scrollTop || 0,
+                        sectionBeforeScroll: currentSection,
+                        sectionAfterScroll: currentSection,
+                        classification: finalClassification,
+                        pauseDuration: finalPauseDuration,
+                        scrollDuration: 0,
+                        isFinalSegment: true
+                    };
+
+                    setEvents(prev => [...prev, finalEvent]);
+                }
+
+                const elapsed = Date.now() - focusStartTimeRef.current;
+                const finalFocusTimes = {
+                    ...focusTimes,
+                    [activeFocus]: focusTimes[activeFocus] + elapsed
+                };
+
+                const readingDuration = Date.now() - phaseStartTime.current;
+                phaseTimers.current.reading = readingDuration;
+
+                // Classification summary
+                const scrollEvents = events.filter(e => e.eventType === 'scroll_action');
+                const classificationSummary = {
+                    reading: {
+                        count: scrollEvents.filter(e => e.classification === 'reading').length,
+                        totalDuration: scrollEvents.filter(e => e.classification === 'reading').reduce((sum, e) => sum + (e.pauseDuration || 0), 0)
+                    },
+                    scanning: {
+                        count: scrollEvents.filter(e => e.classification === 'scanning').length,
+                        totalDuration: scrollEvents.filter(e => e.classification === 'scanning').reduce((sum, e) => sum + (e.pauseDuration || 0), 0)
+                    },
+                    scrolling: {
+                        count: scrollEvents.filter(e => e.classification === 'scrolling').length,
+                        totalDuration: scrollEvents.filter(e => e.classification === 'scrolling').reduce((sum, e) => sum + (e.pauseDuration || 0), 0)
+                    }
+                };
+
+                logEvent('reading_phase_complete', {
+                    duration: readingDuration,
+                    focusTimes: finalFocusTimes,
+                    classificationSummary
+                });
+
+                // Save to Firebase
+                try {
+                    if (window.firebaseDb && participantId && sessionId) {
+                        const experimentRef = window.firebaseDoc(
+                            window.firebaseDb,
+                            `users/${participantId}/experiments/${sessionId}`
+                        );
+
+                        let readingEvents = events.filter(e =>
+                            e.phase === 'reading' &&
+                            (e.eventType === 'scroll_action' || e.eventType === 'focus_switch' ||
+                             e.eventType === 'tab_switch' || e.eventType === 'llm_activity' ||
+                             e.eventType === 'text_selection' || e.eventType === 'resource_tab_switch')
+                        );
+
+                        if (finalEvent) {
+                            readingEvents = [...readingEvents, finalEvent];
+                        }
+
+                        const updateData = {
+                            'reading.duration': readingDuration,
+                            'reading.focusTimes': finalFocusTimes,
+                            'reading.classificationSummary': classificationSummary,
+                            'reading.events': readingEvents,
+                            'reading.completedAt': window.firebaseServerTimestamp()
+                        };
+
+                        if ((condition === 'with_llm' || condition === 'with_llm_extended') && chatHistory.length > 0) {
+                            updateData['llmInteraction.messages'] = chatHistory;
+                            updateData['llmInteraction.totalQueries'] = chatHistory.length;
+                        }
+
+                        await window.firebaseUpdateDoc(experimentRef, updateData);
+                        console.log('✅ Reading phase data saved');
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to save reading data:', error);
+                }
+
+                setPhase('quiz-guide');
+                logEvent('quiz_guide_shown');
+            };
+
+            // Handle quiz answer
+            const handleQuizAnswer = (questionId, answer) => {
+                setQuizAnswers(prev => ({ ...prev, [questionId]: answer }));
+                logEvent('quiz_answer', { questionId, answer });
+            };
+
+            // Complete quiz phase
+            const completeQuiz = async () => {
+                setQuizActive(false);
+                const quizDuration = Date.now() - phaseStartTime.current;
+                phaseTimers.current.quiz = quizDuration;
+                logEvent('quiz_phase_complete', { answers: quizAnswers, duration: quizDuration });
+
+                try {
+                    if (window.firebaseDb && participantId && sessionId) {
+                        const experimentRef = window.firebaseDoc(
+                            window.firebaseDb,
+                            `users/${participantId}/experiments/${sessionId}`
+                        );
+
+                        await window.firebaseUpdateDoc(experimentRef, {
+                            'quiz.answers': quizAnswers,
+                            'quiz.duration': quizDuration,
+                            'quiz.submittedAt': window.firebaseServerTimestamp()
+                        });
+                        console.log('✅ Quiz data saved');
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to save quiz data:', error);
+                }
+
+                setPhase('review-guide');
+                logEvent('review_guide_shown');
+            };
+
+            // Handle review change
+            const handleReviewChange = (field, value) => {
+                setReviewData(prev => ({ ...prev, [field]: value }));
+            };
+
+            // Complete review phase
+            const completeReview = async () => {
+                setReviewActive(false);
+                const reviewDuration = Date.now() - phaseStartTime.current;
+                phaseTimers.current.review = reviewDuration;
+                logEvent('review_phase_complete', { reviewData, duration: reviewDuration });
+
+                try {
+                    if (window.firebaseDb && participantId && sessionId) {
+                        const experimentRef = window.firebaseDoc(
+                            window.firebaseDb,
+                            `users/${participantId}/experiments/${sessionId}`
+                        );
+
+                        await window.firebaseUpdateDoc(experimentRef, {
+                            'review.rating': reviewData.rating,
+                            'review.strengths': reviewData.strengths,
+                            'review.weaknesses': reviewData.weaknesses,
+                            'review.suggestions': reviewData.suggestions,
+                            'review.duration': reviewDuration,
+                            'review.submittedAt': window.firebaseServerTimestamp(),
+                            'status': 'completed',
+                            'completedAt': window.firebaseServerTimestamp()
+                        });
+                        console.log('✅ Experiment completed');
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to complete experiment:', error);
+                }
+
+                setPhase('complete');
+                logEvent('experiment_complete');
+            };
+
+            // Return to start
+            const returnToStart = () => {
+                // Reset all state
+                setPhase('setup');
+                setParticipantId('');
+                setCondition('without_llm');
+                setCurrentPaper('');
+                setPaperContent('');
+                setMessages([]);
+                setChatHistory([]);
+                setQuizAnswers({});
+                setReviewData({ rating: 0, strengths: '', weaknesses: '', suggestions: '' });
+                setEvents([]);
+                setActiveTab('chat');
+                setResourceContent({ infographics: null, audio: null, simplified: null });
+                eventIdCounter.current = 0;
+                unsavedEventsCount.current = 0;
+            };
+
+            // ============ RENDER PHASES ============
+
+            // SETUP PHASE
+            if (phase === 'setup') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+                            <div className="text-center mb-8">
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Reading Experiment</h1>
+                                <p className="text-gray-600">AOM Study</p>
+                            </div>
+
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Participant ID *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={participantId}
+                                        onChange={(e) => setParticipantId(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="e.g., P001"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Condition *
+                                    </label>
+                                    <select
+                                        value={condition}
+                                        onChange={(e) => setCondition(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="without_llm">Without LLM (Control)</option>
+                                        <option value="with_llm">With LLM</option>
+                                        <option value="with_llm_extended">With LLM + Extended Resources</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Select Paper *
+                                    </label>
+                                    <select
+                                        value={currentPaper}
+                                        onChange={(e) => setCurrentPaper(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">Choose a paper...</option>
+                                        {papers.map(paper => (
+                                            <option key={paper.id} value={paper.id}>
+                                                {paper.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <button
+                                    onClick={startExperiment}
+                                    disabled={!participantId || !currentPaper}
+                                    className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors text-lg mt-6"
+                                >
+                                    Start Experiment
+                                </button>
+
+                                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                                    <p className="text-sm text-gray-700">
+                                        <strong>Experiment Structure:</strong><br/>
+                                        1. Reading (30 min)<br/>
+                                        2. Quiz (15 min)<br/>
+                                        3. Review Writing (20 min)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // READING GUIDE PHASE
+            if (phase === 'reading-guide') {
+                const paper = papers.find(p => p.id === currentPaper);
+                const conditionLabels = {
+                    'without_llm': 'Without AI',
+                    'with_llm': 'With AI Chat',
+                    'with_llm_extended': 'With AI Chat + Extended Resources'
+                };
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
+                            <div className="text-center mb-8">
+                                <div className="text-5xl mb-4">📖</div>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">논문 읽기</h1>
+                            </div>
+
+                            <div className="space-y-6 mb-8">
+                                <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
+                                    <p className="text-sm text-blue-900">
+                                        <strong>Condition:</strong> {conditionLabels[condition]}
+                                    </p>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">논문 제목</h3>
+                                    <p className="text-gray-700">{paper?.name}</p>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">제한 시간</h3>
+                                    <p className="text-3xl font-bold text-blue-600">30분</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setPhase('reading');
+                                    setReadingActive(true);
+                                    phaseStartTime.current = Date.now();
+                                    lastActivityTimeRef.current = Date.now();
+                                    logEvent('reading_started');
+                                }}
+                                className="w-full px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-medium transition-colors"
+                            >
+                                시작하기 →
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // READING PHASE
+            if (phase === 'reading') {
+                const showRightPanel = condition === 'with_llm' || condition === 'with_llm_extended';
+
+                // Chat UI Component
+                const ChatUI = () => (
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex-1 overflow-y-auto bg-white">
+                            {messages.length === 0 ? (
+                                <div className="text-center text-gray-500 mt-12">
+                                    <div className="text-4xl mb-4">💬</div>
+                                    <p className="font-medium">Ask me anything!</p>
+                                    <p className="text-sm mt-2 text-gray-400">논문에 대해 질문하세요</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 p-4">
+                                    {messages.map((msg, idx) => (
+                                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                                                msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
+                                            }`}>
+                                                {msg.role === 'assistant' ? (
+                                                    <div className="text-sm" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
+                                                ) : (
+                                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {isLoading && (
+                                        <div className="flex justify-start">
+                                            <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                                                <div className="flex space-x-2">
+                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div ref={chatMessagesEndRef} />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t bg-white">
+                            <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                                <textarea
+                                    ref={textareaRef}
+                                    value={inputMessage}
+                                    onChange={handleTextareaChange}
+                                    onKeyDown={handleChatKeyDown}
+                                    placeholder="Message (Shift+Enter for newline)"
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-2xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    style={{maxHeight: '120px', minHeight: '40px'}}
+                                    rows={1}
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || !inputMessage.trim()}
+                                    className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                >
+                                    <SendIcon />
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+
+                // Infographics Tab
+                const InfographicsTab = () => (
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                        {resourceContent.infographics ? (
+                            <img
+                                src={resourceContent.infographics}
+                                alt="Infographic"
+                                className="max-w-full h-auto mx-auto"
+                            />
+                        ) : (
+                            <div className="text-center text-gray-500 mt-12">
+                                <div className="text-4xl mb-4">📊</div>
+                                <p>No infographic available</p>
+                            </div>
+                        )}
+                    </div>
+                );
+
+                // Audio Tab
+                const AudioTab = () => (
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                        {resourceContent.audio ? (
+                            <div className="flex flex-col items-center justify-center h-full">
+                                <div className="text-6xl mb-6">🎧</div>
+                                <audio controls className="w-full max-w-md">
+                                    <source src={resourceContent.audio} type="audio/mpeg" />
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-500 mt-12">
+                                <div className="text-4xl mb-4">🎵</div>
+                                <p>No audio available</p>
+                            </div>
+                        )}
+                    </div>
+                );
+
+                // Simplified Text Tab
+                const SimplifiedTab = () => (
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                        {resourceContent.simplified ? (
+                            <div
+                                className="prose max-w-none bg-white p-6 rounded-lg shadow"
+                                dangerouslySetInnerHTML={{ __html: resourceContent.simplified }}
+                            />
+                        ) : (
+                            <div className="text-center text-gray-500 mt-12">
+                                <div className="text-4xl mb-4">📝</div>
+                                <p>No simplified text available</p>
+                            </div>
+                        )}
+                    </div>
+                );
+
+                return (
+                    <div className="h-screen flex flex-col bg-gray-100">
+                        {/* Header */}
+                        <div className="bg-white shadow-md px-6 py-4 flex items-center justify-between border-b-2">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-800">
+                                    [논문 읽기] {papers.find(p => p.id === currentPaper)?.name}
+                                </h2>
+                                <p className="text-sm text-gray-600">
+                                    {participantId} | {condition} | Section: <strong>{currentSection}</strong>
+                                </p>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <Timer
+                                    seconds={30 * 60}
+                                    isActive={readingActive}
+                                    phase="reading"
+                                    onComplete={() => alert('Reading time is up!')}
+                                />
+                                <button
+                                    onClick={() => setShowFinishPopup(true)}
+                                    className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                                >
+                                    <CheckIcon />
+                                    <span>Finish Reading</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Main content */}
+                        <div className="flex-1 flex overflow-hidden">
+                            {/* Left Panel - Paper */}
+                            <div
+                                className={`${showRightPanel ? 'w-1/2' : 'flex-1'} bg-gray-50 flex flex-col overflow-hidden transition-all ${
+                                    showRightPanel && activeFocus === 'reading' ? 'border-4 border-purple-500' : 'border-4 border-transparent'
+                                }`}
+                                onMouseEnter={() => showRightPanel && switchFocus('reading')}
+                            >
+                                <div
+                                    ref={pdfContainerRef}
+                                    onScroll={handleScroll}
+                                    onMouseUp={handleTextSelection}
+                                    className="flex-1 overflow-y-auto p-8"
+                                >
+                                    <div className="w-full max-w-[900px] mx-auto bg-white shadow-xl rounded-lg p-12">
+                                        <div
+                                            id="paper-content"
+                                            className="prose max-w-none"
+                                            dangerouslySetInnerHTML={{ __html: paperContent || '<p>Loading paper...</p>' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Panel - Chat / Resources */}
+                            {showRightPanel && (
+                                <div
+                                    className={`w-1/2 bg-white flex flex-col overflow-hidden transition-all ${
+                                        activeFocus === 'chat' ? 'border-4 border-purple-500' : 'border-4 border-transparent'
+                                    }`}
+                                    onMouseEnter={() => switchFocus('chat')}
+                                >
+                                    {condition === 'with_llm_extended' ? (
+                                        // Extended condition with tabs
+                                        <>
+                                            {/* Tab Header */}
+                                            <div className="flex border-b bg-gray-100">
+                                                <button
+                                                    onClick={() => handleTabSwitch('infographics')}
+                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                        activeTab === 'infographics'
+                                                            ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    📊 Infographics
+                                                </button>
+                                                <button
+                                                    onClick={() => handleTabSwitch('audio')}
+                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                        activeTab === 'audio'
+                                                            ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    🎧 Audio
+                                                </button>
+                                                <button
+                                                    onClick={() => handleTabSwitch('simplified')}
+                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                        activeTab === 'simplified'
+                                                            ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    📝 Simplified
+                                                </button>
+                                                <button
+                                                    onClick={() => handleTabSwitch('chat')}
+                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                        activeTab === 'chat'
+                                                            ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    💬 Chat
+                                                </button>
+                                            </div>
+
+                                            {/* Tab Content */}
+                                            <div className="flex-1 flex flex-col overflow-hidden">
+                                                {activeTab === 'infographics' && <InfographicsTab />}
+                                                {activeTab === 'audio' && <AudioTab />}
+                                                {activeTab === 'simplified' && <SimplifiedTab />}
+                                                {activeTab === 'chat' && <ChatUI />}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        // Standard with_llm condition - just chat
+                                        <>
+                                            <div className="px-4 py-3 border-b bg-white flex items-center justify-between">
+                                                <span className="text-xl font-semibold">AI Assistant</span>
+                                            </div>
+                                            <ChatUI />
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Finish Popup */}
+                        {showFinishPopup && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">리딩 세션을 끝낼까요?</h3>
+                                    <p className="text-gray-600 mb-6">다음 단계로 진행합니다.</p>
+                                    <div className="flex space-x-4">
+                                        <button
+                                            onClick={() => setShowFinishPopup(false)}
+                                            className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowFinishPopup(false);
+                                                completeReading();
+                                            }}
+                                            className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                                        >
+                                            확인
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // QUIZ GUIDE PHASE
+            if (phase === 'quiz-guide') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
+                            <div className="text-center mb-8">
+                                <div className="text-5xl mb-4">📝</div>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">논문 이해도 퀴즈</h1>
+                            </div>
+
+                            <div className="space-y-6 mb-8">
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">안내</h3>
+                                    <p className="text-gray-700">논문을 읽고 이해한 내용을 바탕으로 질문에 답해주세요.</p>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">제한 시간</h3>
+                                    <p className="text-3xl font-bold text-purple-600">15분</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setPhase('quiz');
+                                    setQuizActive(true);
+                                    phaseStartTime.current = Date.now();
+                                    logEvent('quiz_phase_start');
+                                }}
+                                className="w-full px-8 py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-lg font-medium"
+                            >
+                                시작하기 →
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // QUIZ PHASE
+            if (phase === 'quiz') {
+                return (
+                    <div className="min-h-screen bg-gray-50">
+                        <div className="bg-white shadow-md px-6 py-4 border-b-2 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-800">문제 풀이</h2>
+                                <p className="text-sm text-gray-600">Closed-book</p>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <Timer
+                                    seconds={15 * 60}
+                                    isActive={quizActive}
+                                    phase="quiz"
+                                    onComplete={() => alert('Quiz time is up!')}
+                                />
+                                <button
+                                    onClick={() => setShowFinishPopup(true)}
+                                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                                >
+                                    Submit Quiz
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="max-w-4xl mx-auto p-8">
+                            <div className="space-y-6">
+                                {quizQuestions.map((q, idx) => (
+                                    <div key={q.id} className="bg-white rounded-lg shadow-md p-6">
+                                        <div className="flex items-start space-x-3 mb-4">
+                                            <span className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                {idx + 1}
+                                            </span>
+                                            <div className="flex-1">
+                                                <p className="font-medium text-gray-900 mb-2">{q.question}</p>
+
+                                                {q.type === 'multiple_choice' ? (
+                                                    <div className="space-y-2 mt-4">
+                                                        {q.options?.map((option, optIdx) => (
+                                                            <label key={optIdx} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200">
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`question-${q.id}`}
+                                                                    value={option}
+                                                                    checked={quizAnswers[q.id] === option}
+                                                                    onChange={(e) => handleQuizAnswer(q.id, e.target.value)}
+                                                                    className="w-4 h-4"
+                                                                />
+                                                                <span className="text-gray-700">{option}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <textarea
+                                                        className="w-full mt-4 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                        rows="4"
+                                                        placeholder="답변을 입력하세요..."
+                                                        value={quizAnswers[q.id] || ''}
+                                                        onChange={(e) => handleQuizAnswer(q.id, e.target.value)}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 p-4 bg-gray-100 rounded-lg">
+                                <p className="text-sm text-gray-600">
+                                    Progress: {Object.keys(quizAnswers).length} / {quizQuestions.length} questions answered
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Finish Quiz Popup */}
+                        {showFinishPopup && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">퀴즈 세션을 끝낼까요?</h3>
+                                    <div className="flex space-x-4">
+                                        <button
+                                            onClick={() => setShowFinishPopup(false)}
+                                            className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowFinishPopup(false);
+                                                completeQuiz();
+                                            }}
+                                            className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
+                                        >
+                                            확인
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // REVIEW GUIDE PHASE
+            if (phase === 'review-guide') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
+                            <div className="text-center mb-8">
+                                <div className="text-5xl mb-4">✍️</div>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">논문 리뷰 작성</h1>
+                            </div>
+
+                            <div className="space-y-6 mb-8">
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">안내</h3>
+                                    <p className="text-gray-700">리뷰어의 관점에서 논문을 평가해주세요.</p>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">제한 시간</h3>
+                                    <p className="text-3xl font-bold text-green-600">20분</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setPhase('review');
+                                    setReviewActive(true);
+                                    phaseStartTime.current = Date.now();
+                                    logEvent('review_phase_start');
+                                }}
+                                className="w-full px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 text-lg font-medium"
+                            >
+                                시작하기 →
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // REVIEW PHASE
+            if (phase === 'review') {
+                return (
+                    <div className="h-screen flex flex-col bg-gray-50">
+                        <div className="bg-white shadow-md px-6 py-4 border-b-2 flex items-center justify-between flex-shrink-0">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-800">논문 리뷰 작성</h2>
+                                <p className="text-sm text-gray-600">Open-book</p>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <Timer
+                                    seconds={20 * 60}
+                                    isActive={reviewActive}
+                                    phase="review"
+                                    onComplete={() => alert('Review time is up!')}
+                                />
+                                <button
+                                    onClick={() => setShowFinishPopup(true)}
+                                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                                >
+                                    Submit Review
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden px-4 py-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+                                {/* Paper */}
+                                <div className="bg-white rounded-lg shadow-md p-6 overflow-y-auto">
+                                    <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: paperContent }} />
+                                </div>
+
+                                {/* Review Form */}
+                                <div className="overflow-y-auto space-y-6">
+                                    <div className="bg-white rounded-lg shadow-md p-6">
+                                        <h3 className="text-xl font-bold mb-4">Rating</h3>
+                                        <div className="flex items-center space-x-4">
+                                            {[1, 2, 3, 4, 5].map(rating => (
+                                                <button
+                                                    key={rating}
+                                                    onClick={() => handleReviewChange('rating', rating)}
+                                                    className={`w-12 h-12 rounded-full font-bold transition-colors ${
+                                                        reviewData.rating === rating
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    }`}
+                                                >
+                                                    {rating}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-gray-600 mt-2">1=Reject, 5=Accept</p>
+                                    </div>
+
+                                    <div className="bg-white rounded-lg shadow-md p-6">
+                                        <h3 className="text-lg font-bold mb-2">Strengths</h3>
+                                        <textarea
+                                            value={reviewData.strengths}
+                                            onChange={(e) => handleReviewChange('strengths', e.target.value)}
+                                            className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="이 연구의 강점..."
+                                        />
+                                    </div>
+
+                                    <div className="bg-white rounded-lg shadow-md p-6">
+                                        <h3 className="text-lg font-bold mb-2">Weaknesses</h3>
+                                        <textarea
+                                            value={reviewData.weaknesses}
+                                            onChange={(e) => handleReviewChange('weaknesses', e.target.value)}
+                                            className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="이 연구의 약점..."
+                                        />
+                                    </div>
+
+                                    <div className="bg-white rounded-lg shadow-md p-6">
+                                        <h3 className="text-lg font-bold mb-2">Suggestions</h3>
+                                        <textarea
+                                            value={reviewData.suggestions}
+                                            onChange={(e) => handleReviewChange('suggestions', e.target.value)}
+                                            className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="개선 제안..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Finish Review Popup */}
+                        {showFinishPopup && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">리뷰 세션을 끝낼까요?</h3>
+                                    <div className="flex space-x-4">
+                                        <button
+                                            onClick={() => setShowFinishPopup(false)}
+                                            className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowFinishPopup(false);
+                                                completeReview();
+                                            }}
+                                            className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                                        >
+                                            확인
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // COMPLETE PHASE
+            if (phase === 'complete') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-2xl p-12 max-w-2xl w-full text-center">
+                            <div className="text-6xl mb-6">🎉</div>
+                            <h1 className="text-4xl font-bold text-gray-800 mb-4">실험 완료!</h1>
+                            <p className="text-gray-600 mb-8">참여해 주셔서 감사합니다.</p>
+
+                            <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
+                                <h3 className="font-bold text-lg mb-4">요약</h3>
+                                <div className="space-y-2 text-gray-700">
+                                    <p>• 참여자: <strong>{participantId}</strong></p>
+                                    <p>• 조건: <strong>{condition}</strong></p>
+                                    <p>• 논문: <strong>{papers.find(p => p.id === currentPaper)?.name}</strong></p>
+                                    <p>• 퀴즈 응답: <strong>{Object.keys(quizAnswers).length} / {quizQuestions.length}</strong></p>
+                                    <p>• 리뷰 평점: <strong>{reviewData.rating} / 5</strong></p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={returnToStart}
+                                className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-medium"
+                            >
+                                처음으로 돌아가기
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return null;
+        }
+
+        ReactDOM.render(<ReadingExperimentAOM />, document.getElementById('root'));
+    </script>
+</body>
+</html>

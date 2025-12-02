@@ -1,0 +1,59 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject API Key into index.html
+        run: |
+          echo "Before injection:"
+          grep "const apiKey" index.html || echo "Pattern not found"
+
+          # Use perl for reliable replacement
+          perl -i -pe "s/__OPENAI_API_KEY__/${{ secrets.OPENAI_API_KEY }}/g" index.html
+
+          echo "After injection:"
+          grep "const apiKey" index.html || echo "Pattern not found"
+          echo "✅ API key injected into index.html"
+
+      - name: Verify injection
+        run: |
+          if grep -q "__OPENAI_API_KEY__" index.html; then
+            echo "❌ ERROR: API key placeholder still exists!"
+            grep -n "__OPENAI_API_KEY__" index.html
+            exit 1
+          else
+            echo "✅ API key placeholder replaced successfully"
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

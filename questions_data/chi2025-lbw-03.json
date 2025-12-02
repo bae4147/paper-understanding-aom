@@ -1,0 +1,106 @@
+{
+  "paperId": "chi2025-lbw-03",
+  "paperTitle": "Finding the Right Balance: User Control and Automation in AI Tools for Supporting Older Adults' Health Information Tasks",
+  "questions": [
+    {
+      "id": 1,
+      "type": "multiple_choice",
+      "question": "본 연구의 주요 연구 질문은 무엇인가?",
+      "options": [
+        "의료진의 업무 효율성을 높이는 자동화 기술을 개발하는 것",
+        "고령층이 건강 정보를 관리하는 데 선호하는 AI 자동화 수준을 파악하는 것",
+        "고령층의 만성질환 종류를 분류하는 모델을 개발하는 것",
+        "기존 전자의무기록(EHR) 시스템의 사용성을 테스트하는 것"
+      ],
+      "correctAnswer": "고령층이 건강 정보를 관리하는 데 선호하는 AI 자동화 수준을 파악하는 것",
+      "section": "Introduction"
+    },
+    {
+      "id": 2,
+      "type": "multiple_choice",
+      "question": "연구에서 사용된 프로토타입의 설계 목표에 해당하지 않는 것은?",
+      "options": [
+        "의사-환자 대화를 자동으로 문서화하는 기능",
+        "건강 정보 질문에 대한 AI 기반 답변 제공",
+        "의료 진단을 자동으로 수행하는 기능",
+        "요약 및 단순화 기능을 통한 텍스트 이해 지원"
+      ],
+      "correctAnswer": "의료 진단을 자동으로 수행하는 기능",
+      "section": "Methods"
+    },
+    {
+      "id": 3,
+      "type": "multiple_choice",
+      "question": "참여자들이 '텍스트 요약(text summarization)' 기능에 대해 선호한 방식은 무엇이었는가?",
+      "options": [
+        "사용자가 요약 길이를 직접 조절하는 방식",
+        "AI가 요약 길이를 자동으로 결정하는 방식(완전 대리)",
+        "요약을 제공하지 않는 방식",
+        "요약 대신 검색 기능을 활용하는 방식"
+      ],
+      "correctAnswer": "AI가 요약 길이를 자동으로 결정하는 방식(완전 대리)",
+      "section": "Results"
+    },
+    {
+      "id": 4,
+      "type": "multiple_choice",
+      "question": "참여자들이 텍스트 단순화(text simplification) 기능 대신 선호한 방식은 무엇인가?",
+      "options": [
+        "AI가 문서를 완전히 다시 작성하도록 하는 기능",
+        "사용자가 직접 이해한 내용을 입력하는 기능",
+        "특정 의학 용어를 선택해 사전 기반 정의를 조회하는 방식",
+        "요약된 내용만 읽을 수 있는 방식"
+      ],
+      "correctAnswer": "특정 의학 용어를 선택해 사전 기반 정의를 조회하는 방식",
+      "section": "Results"
+    },
+    {
+      "id": 5,
+      "type": "multiple_choice",
+      "question": "참여자들이 의료 대화 기록 기능을 사용할 때 강조한 요구 사항은 무엇인가?",
+      "options": [
+        "자동 요약만 제공하면 충분하다",
+        "전체 녹음과 전체 대화 기록에 접근할 수 있어야 한다",
+        "의료 대화 기록은 가족만 열람할 수 있어야 한다",
+        "의사가 작성한 노트만 제공하면 된다"
+      ],
+      "correctAnswer": "전체 녹음과 전체 대화 기록에 접근할 수 있어야 한다",
+      "section": "Results"
+    },
+    {
+      "id": 6,
+      "type": "short_answer",
+      "question": "본 연구에서 두 개의 포커스 그룹은 총 몇 명의 고령 참여자로 구성되었는가?",
+      "correctAnswer": "9명",
+      "section": "Methods"
+    },
+    {
+      "id": 7,
+      "type": "short_answer",
+      "question": "참여자들이 자동 텍스트 단순화 기능을 꺼려한 핵심 이유를 한 문장으로 설명하라.",
+      "correctAnswer": "AI 단순화가 원문의 의미를 왜곡할 수 있다는 신뢰성 및 정확성 우려 때문.",
+      "section": "Results"
+    },
+    {
+      "id": 8,
+      "type": "short_answer",
+      "question": "연구에서 도출된 자동화 선호 프레임워크의 세 가지 범주를 모두 적어라.",
+      "correctAnswer": "Full delegation, Direct control, Collaborative completion",
+      "section": "Results"
+    },
+    {
+      "id": 9,
+      "type": "short_answer",
+      "question": "참여자들이 건강 정보 검색 시 신뢰한 정보원(예: WebMD 등)은 어떤 특징을 가진 출처였는가?",
+      "correctAnswer": "의학적으로 검증된 기관이나 공식 의료 정보 출처",
+      "section": "Results"
+    },
+    {
+      "id": 10,
+      "type": "short_answer",
+      "question": "참여자들이 공유(Share) 기능에서 가장 중요하게 생각한 사용자 권한 관련 요구는 무엇인가?",
+      "correctAnswer": "어떤 정보를 누구에게 언제 공유할지 사용자가 직접 선택할 수 있는 통제권",
+      "section": "Results"
+    }
+  ]
+}
