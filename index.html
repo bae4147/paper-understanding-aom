@@ -136,6 +136,7 @@
             const [resourceContent, setResourceContent] = useState({
                 infographics: null,
                 audio: null,
+                audioType: null,
                 simplified: null
             });
 
@@ -233,12 +234,22 @@
                         })
                         .catch(() => {});
 
-                    // Load audio
-                    const audioPath = `papers_resources/${currentPaper}/audio.mp3`;
-                    fetch(audioPath)
+                    // Load audio (try m4a first, then mp3)
+                    const audioPathM4a = `papers_resources/${currentPaper}/audio.m4a`;
+                    const audioPathMp3 = `papers_resources/${currentPaper}/audio.mp3`;
+                    fetch(audioPathM4a)
                         .then(res => {
                             if (res.ok) {
-                                setResourceContent(prev => ({ ...prev, audio: audioPath }));
+                                setResourceContent(prev => ({ ...prev, audio: audioPathM4a, audioType: 'audio/mp4' }));
+                            } else {
+                                // Try mp3 as fallback
+                                fetch(audioPathMp3)
+                                    .then(res2 => {
+                                        if (res2.ok) {
+                                            setResourceContent(prev => ({ ...prev, audio: audioPathMp3, audioType: 'audio/mpeg' }));
+                                        }
+                                    })
+                                    .catch(() => {});
                             }
                         })
                         .catch(() => {});
@@ -1108,7 +1119,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                 setReviewData({ rating: 0, strengths: '', weaknesses: '', suggestions: '' });
                 setEvents([]);
                 setActiveTab('chat');
-                setResourceContent({ infographics: null, audio: null, simplified: null });
+                setResourceContent({ infographics: null, audio: null, audioType: null, simplified: null });
                 setTabUsageTimes({ infographics: 0, audio: 0, simplified: 0, chat: 0 });
                 eventIdCounter.current = 0;
                 unsavedEventsCount.current = 0;
@@ -1351,7 +1362,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                     onEnded={handleAudioEnded}
                                     onSeeked={handleAudioSeeked}
                                 >
-                                    <source src={resourceContent.audio} type="audio/mpeg" />
+                                    <source src={resourceContent.audio} type={resourceContent.audioType || 'audio/mpeg'} />
                                     Your browser does not support the audio element.
                                 </audio>
                             </div>
