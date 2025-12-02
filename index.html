@@ -139,6 +139,16 @@
                 simplified: null
             });
 
+            // Resource usage tracking for extended condition
+            const tabStartTimeRef = useRef(Date.now());
+            const [tabUsageTimes, setTabUsageTimes] = useState({
+                infographics: 0,
+                audio: 0,
+                simplified: 0,
+                chat: 0
+            });
+            const audioRef = useRef(null);
+
             // Quiz phase state
             const [quizActive, setQuizActive] = useState(false);
             const [quizAnswers, setQuizAnswers] = useState({});
@@ -370,7 +380,11 @@
                          e.eventType === 'tab_switch' ||
                          e.eventType === 'llm_activity' ||
                          e.eventType === 'text_selection' ||
-                         e.eventType === 'resource_tab_switch')
+                         e.eventType === 'resource_tab_switch' ||
+                         e.eventType === 'audio_play' ||
+                         e.eventType === 'audio_pause' ||
+                         e.eventType === 'audio_ended' ||
+                         e.eventType === 'audio_seeked')
                     );
 
                     if (readingEvents.length === 0) {
@@ -539,13 +553,53 @@
             const handleTabSwitch = (newTab) => {
                 if (newTab === activeTab) return;
 
+                const now = Date.now();
+                const timeOnPreviousTab = now - tabStartTimeRef.current;
+
+                // Update accumulated time for previous tab
+                setTabUsageTimes(prev => ({
+                    ...prev,
+                    [activeTab]: prev[activeTab] + timeOnPreviousTab
+                }));
+
                 logEvent('resource_tab_switch', {
                     from: activeTab,
                     to: newTab,
-                    timestamp: Date.now()
+                    timeOnPreviousTab,
+                    timestamp: now
                 });
 
+                tabStartTimeRef.current = now;
                 setActiveTab(newTab);
+            };
+
+            // Handle audio events (for extended condition)
+            const handleAudioPlay = () => {
+                logEvent('audio_play', {
+                    currentTime: audioRef.current?.currentTime || 0,
+                    timestamp: Date.now()
+                });
+            };
+
+            const handleAudioPause = () => {
+                logEvent('audio_pause', {
+                    currentTime: audioRef.current?.currentTime || 0,
+                    timestamp: Date.now()
+                });
+            };
+
+            const handleAudioEnded = () => {
+                logEvent('audio_ended', {
+                    duration: audioRef.current?.duration || 0,
+                    timestamp: Date.now()
+                });
+            };
+
+            const handleAudioSeeked = () => {
+                logEvent('audio_seeked', {
+                    currentTime: audioRef.current?.currentTime || 0,
+                    timestamp: Date.now()
+                });
             };
 
             // Handle typing in Chat
@@ -903,7 +957,9 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                             e.phase === 'reading' &&
                             (e.eventType === 'scroll_action' || e.eventType === 'focus_switch' ||
                              e.eventType === 'tab_switch' || e.eventType === 'llm_activity' ||
-                             e.eventType === 'text_selection' || e.eventType === 'resource_tab_switch')
+                             e.eventType === 'text_selection' || e.eventType === 'resource_tab_switch' ||
+                             e.eventType === 'audio_play' || e.eventType === 'audio_pause' ||
+                             e.eventType === 'audio_ended' || e.eventType === 'audio_seeked')
                         );
 
                         if (finalEvent) {
@@ -921,6 +977,36 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                         if ((condition === 'with_llm' || condition === 'with_llm_extended') && chatHistory.length > 0) {
                             updateData['llmInteraction.messages'] = chatHistory;
                             updateData['llmInteraction.totalQueries'] = chatHistory.length;
+                        }
+
+                        // Save extended condition data
+                        if (condition === 'with_llm_extended') {
+                            // Calculate final tab usage time
+                            const finalTabTime = Date.now() - tabStartTimeRef.current;
+                            const finalTabUsageTimes = {
+                                ...tabUsageTimes,
+                                [activeTab]: tabUsageTimes[activeTab] + finalTabTime
+                            };
+
+                            updateData['extendedResources.tabUsageTimes'] = finalTabUsageTimes;
+                            updateData['extendedResources.resourcesAvailable'] = {
+                                infographics: !!resourceContent.infographics,
+                                audio: !!resourceContent.audio,
+                                simplified: !!resourceContent.simplified
+                            };
+
+                            // Count audio events
+                            const audioEvents = events.filter(e =>
+                                e.eventType === 'audio_play' ||
+                                e.eventType === 'audio_pause' ||
+                                e.eventType === 'audio_ended' ||
+                                e.eventType === 'audio_seeked'
+                            );
+                            updateData['extendedResources.audioInteractions'] = audioEvents.length;
+
+                            // Count tab switches
+                            const tabSwitchEvents = events.filter(e => e.eventType === 'resource_tab_switch');
+                            updateData['extendedResources.tabSwitchCount'] = tabSwitchEvents.length;
                         }
 
                         await window.firebaseUpdateDoc(experimentRef, updateData);
@@ -1023,8 +1109,10 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                 setEvents([]);
                 setActiveTab('chat');
                 setResourceContent({ infographics: null, audio: null, simplified: null });
+                setTabUsageTimes({ infographics: 0, audio: 0, simplified: 0, chat: 0 });
                 eventIdCounter.current = 0;
                 unsavedEventsCount.current = 0;
+                tabStartTimeRef.current = Date.now();
             };
 
             // ============ RENDER PHASES ============
@@ -1254,7 +1342,15 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                         {resourceContent.audio ? (
                             <div className="flex flex-col items-center justify-center h-full">
                                 <div className="text-6xl mb-6">🎧</div>
-                                <audio controls className="w-full max-w-md">
+                                <audio
+                                    ref={audioRef}
+                                    controls
+                                    className="w-full max-w-md"
+                                    onPlay={handleAudioPlay}
+                                    onPause={handleAudioPause}
+                                    onEnded={handleAudioEnded}
+                                    onSeeked={handleAudioSeeked}
+                                >
                                     <source src={resourceContent.audio} type="audio/mpeg" />
                                     Your browser does not support the audio element.
                                 </audio>
