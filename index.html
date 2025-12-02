@@ -130,11 +130,12 @@
             const focusStartTimeRef = useRef(Date.now());
 
             // Right panel tab state (for with_llm_extended)
-            const [activeTab, setActiveTab] = useState('chat'); // 'infographics', 'audio', 'simplified', 'chat'
+            const [activeTab, setActiveTab] = useState('chat'); // 'infographics', 'video', 'audio', 'simplified', 'chat'
 
             // Resource state for extended condition
             const [resourceContent, setResourceContent] = useState({
                 infographics: null,
+                video: null,
                 audio: null,
                 audioType: null,
                 simplified: null
@@ -144,11 +145,13 @@
             const tabStartTimeRef = useRef(Date.now());
             const [tabUsageTimes, setTabUsageTimes] = useState({
                 infographics: 0,
+                video: 0,
                 audio: 0,
                 simplified: 0,
                 chat: 0
             });
             const audioRef = useRef(null);
+            const videoRef = useRef(null);
 
             // Quiz phase state
             const [quizActive, setQuizActive] = useState(false);
@@ -230,6 +233,16 @@
                         .then(res => {
                             if (res.ok) {
                                 setResourceContent(prev => ({ ...prev, infographics: infographicPath }));
+                            }
+                        })
+                        .catch(() => {});
+
+                    // Load video
+                    const videoPath = `papers_resources/${currentPaper}/video.mp4`;
+                    fetch(videoPath)
+                        .then(res => {
+                            if (res.ok) {
+                                setResourceContent(prev => ({ ...prev, video: videoPath }));
                             }
                         })
                         .catch(() => {});
@@ -395,7 +408,11 @@
                          e.eventType === 'audio_play' ||
                          e.eventType === 'audio_pause' ||
                          e.eventType === 'audio_ended' ||
-                         e.eventType === 'audio_seeked')
+                         e.eventType === 'audio_seeked' ||
+                         e.eventType === 'video_play' ||
+                         e.eventType === 'video_pause' ||
+                         e.eventType === 'video_ended' ||
+                         e.eventType === 'video_seeked')
                     );
 
                     if (readingEvents.length === 0) {
@@ -609,6 +626,35 @@
             const handleAudioSeeked = () => {
                 logEvent('audio_seeked', {
                     currentTime: audioRef.current?.currentTime || 0,
+                    timestamp: Date.now()
+                });
+            };
+
+            // Handle video events (for extended condition)
+            const handleVideoPlay = () => {
+                logEvent('video_play', {
+                    currentTime: videoRef.current?.currentTime || 0,
+                    timestamp: Date.now()
+                });
+            };
+
+            const handleVideoPause = () => {
+                logEvent('video_pause', {
+                    currentTime: videoRef.current?.currentTime || 0,
+                    timestamp: Date.now()
+                });
+            };
+
+            const handleVideoEnded = () => {
+                logEvent('video_ended', {
+                    duration: videoRef.current?.duration || 0,
+                    timestamp: Date.now()
+                });
+            };
+
+            const handleVideoSeeked = () => {
+                logEvent('video_seeked', {
+                    currentTime: videoRef.current?.currentTime || 0,
                     timestamp: Date.now()
                 });
             };
@@ -970,7 +1016,9 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                              e.eventType === 'tab_switch' || e.eventType === 'llm_activity' ||
                              e.eventType === 'text_selection' || e.eventType === 'resource_tab_switch' ||
                              e.eventType === 'audio_play' || e.eventType === 'audio_pause' ||
-                             e.eventType === 'audio_ended' || e.eventType === 'audio_seeked')
+                             e.eventType === 'audio_ended' || e.eventType === 'audio_seeked' ||
+                             e.eventType === 'video_play' || e.eventType === 'video_pause' ||
+                             e.eventType === 'video_ended' || e.eventType === 'video_seeked')
                         );
 
                         if (finalEvent) {
@@ -1002,6 +1050,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                             updateData['extendedResources.tabUsageTimes'] = finalTabUsageTimes;
                             updateData['extendedResources.resourcesAvailable'] = {
                                 infographics: !!resourceContent.infographics,
+                                video: !!resourceContent.video,
                                 audio: !!resourceContent.audio,
                                 simplified: !!resourceContent.simplified
                             };
@@ -1014,6 +1063,15 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                 e.eventType === 'audio_seeked'
                             );
                             updateData['extendedResources.audioInteractions'] = audioEvents.length;
+
+                            // Count video events
+                            const videoEvents = events.filter(e =>
+                                e.eventType === 'video_play' ||
+                                e.eventType === 'video_pause' ||
+                                e.eventType === 'video_ended' ||
+                                e.eventType === 'video_seeked'
+                            );
+                            updateData['extendedResources.videoInteractions'] = videoEvents.length;
 
                             // Count tab switches
                             const tabSwitchEvents = events.filter(e => e.eventType === 'resource_tab_switch');
@@ -1119,8 +1177,8 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                 setReviewData({ rating: 0, strengths: '', weaknesses: '', suggestions: '' });
                 setEvents([]);
                 setActiveTab('chat');
-                setResourceContent({ infographics: null, audio: null, audioType: null, simplified: null });
-                setTabUsageTimes({ infographics: 0, audio: 0, simplified: 0, chat: 0 });
+                setResourceContent({ infographics: null, video: null, audio: null, audioType: null, simplified: null });
+                setTabUsageTimes({ infographics: 0, video: 0, audio: 0, simplified: 0, chat: 0 });
                 eventIdCounter.current = 0;
                 unsavedEventsCount.current = 0;
                 tabStartTimeRef.current = Date.now();
@@ -1347,6 +1405,33 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                     </div>
                 );
 
+                // Video Tab - inline JSX
+                const videoTab = (
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                        {resourceContent.video ? (
+                            <div className="flex flex-col items-center justify-center h-full">
+                                <video
+                                    ref={videoRef}
+                                    controls
+                                    className="w-full max-w-2xl rounded-lg shadow-lg"
+                                    onPlay={handleVideoPlay}
+                                    onPause={handleVideoPause}
+                                    onEnded={handleVideoEnded}
+                                    onSeeked={handleVideoSeeked}
+                                >
+                                    <source src={resourceContent.video} type="video/mp4" />
+                                    Your browser does not support the video element.
+                                </video>
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-500 mt-12">
+                                <div className="text-4xl mb-4">🎬</div>
+                                <p>No video available</p>
+                            </div>
+                        )}
+                    </div>
+                );
+
                 // Audio Tab - inline JSX
                 const audioTab = (
                     <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
@@ -1461,7 +1546,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                             <div className="flex border-b bg-gray-100">
                                                 <button
                                                     onClick={() => handleTabSwitch('infographics')}
-                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                    className={`flex-1 px-2 py-3 text-xs font-medium transition-colors ${
                                                         activeTab === 'infographics'
                                                             ? 'bg-white text-blue-600 border-b-2 border-blue-600'
                                                             : 'text-gray-600 hover:bg-gray-200'
@@ -1470,8 +1555,18 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                                     📊 Infographics
                                                 </button>
                                                 <button
+                                                    onClick={() => handleTabSwitch('video')}
+                                                    className={`flex-1 px-2 py-3 text-xs font-medium transition-colors ${
+                                                        activeTab === 'video'
+                                                            ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    🎬 Video
+                                                </button>
+                                                <button
                                                     onClick={() => handleTabSwitch('audio')}
-                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                    className={`flex-1 px-2 py-3 text-xs font-medium transition-colors ${
                                                         activeTab === 'audio'
                                                             ? 'bg-white text-blue-600 border-b-2 border-blue-600'
                                                             : 'text-gray-600 hover:bg-gray-200'
@@ -1481,7 +1576,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                                 </button>
                                                 <button
                                                     onClick={() => handleTabSwitch('simplified')}
-                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                    className={`flex-1 px-2 py-3 text-xs font-medium transition-colors ${
                                                         activeTab === 'simplified'
                                                             ? 'bg-white text-blue-600 border-b-2 border-blue-600'
                                                             : 'text-gray-600 hover:bg-gray-200'
@@ -1491,7 +1586,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                                 </button>
                                                 <button
                                                     onClick={() => handleTabSwitch('chat')}
-                                                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                                                    className={`flex-1 px-2 py-3 text-xs font-medium transition-colors ${
                                                         activeTab === 'chat'
                                                             ? 'bg-white text-blue-600 border-b-2 border-blue-600'
                                                             : 'text-gray-600 hover:bg-gray-200'
@@ -1504,6 +1599,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                             {/* Tab Content */}
                                             <div className="flex-1 flex flex-col overflow-hidden">
                                                 {activeTab === 'infographics' && infographicsTab}
+                                                {activeTab === 'video' && videoTab}
                                                 {activeTab === 'audio' && audioTab}
                                                 {activeTab === 'simplified' && simplifiedTab}
                                                 {activeTab === 'chat' && chatUI}
