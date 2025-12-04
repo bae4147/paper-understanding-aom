@@ -1425,7 +1425,7 @@ Use markdown formatting for better readability:
                         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">📖</div>
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">논문 읽기</h1>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Paper Reading</h1>
                             </div>
 
                             <div className="space-y-6 mb-8">
@@ -1774,7 +1774,7 @@ Use markdown formatting for better readability:
                                             onClick={() => setShowFinishPopup(false)}
                                             className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
                                         >
-                                            취소
+                                            Cancel
                                         </button>
                                         <button
                                             onClick={() => {
@@ -1783,7 +1783,7 @@ Use markdown formatting for better readability:
                                             }}
                                             className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                                         >
-                                            확인
+                                            Confirm
                                         </button>
                                     </div>
                                 </div>
@@ -1894,7 +1894,7 @@ Use markdown formatting for better readability:
                                                     <textarea
                                                         className="w-full mt-4 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                                         rows="4"
-                                                        placeholder="답변을 입력하세요..."
+                                                        placeholder="Enter your answer..."
                                                         value={quizAnswers[q.id] || ''}
                                                         onChange={(e) => handleQuizAnswer(q.id, e.target.value)}
                                                     />
@@ -1916,13 +1916,13 @@ Use markdown formatting for better readability:
                         {showFinishPopup && (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                                 <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">퀴즈 세션을 끝낼까요?</h3>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">End quiz session?</h3>
                                     <div className="flex space-x-4">
                                         <button
                                             onClick={() => setShowFinishPopup(false)}
                                             className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
                                         >
-                                            취소
+                                            Cancel
                                         </button>
                                         <button
                                             onClick={() => {
@@ -1931,7 +1931,7 @@ Use markdown formatting for better readability:
                                             }}
                                             className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
                                         >
-                                            확인
+                                            Confirm
                                         </button>
                                     </div>
                                 </div>
@@ -2039,7 +2039,7 @@ Use markdown formatting for better readability:
                                             value={reviewData.strengths}
                                             onChange={(e) => handleReviewChange('strengths', e.target.value)}
                                             className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="이 연구의 강점..."
+                                            placeholder="Strengths of this research..."
                                         />
                                     </div>
 
@@ -2049,7 +2049,7 @@ Use markdown formatting for better readability:
                                             value={reviewData.weaknesses}
                                             onChange={(e) => handleReviewChange('weaknesses', e.target.value)}
                                             className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="이 연구의 약점..."
+                                            placeholder="Weaknesses of this research..."
                                         />
                                     </div>
 
@@ -2059,7 +2059,7 @@ Use markdown formatting for better readability:
                                             value={reviewData.suggestions}
                                             onChange={(e) => handleReviewChange('suggestions', e.target.value)}
                                             className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="개선 제안..."
+                                            placeholder="Suggestions for improvement..."
                                         />
                                     </div>
                                 </div>
@@ -2070,13 +2070,13 @@ Use markdown formatting for better readability:
                         {showFinishPopup && (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                                 <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">리뷰 세션을 끝낼까요?</h3>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">End review session?</h3>
                                     <div className="flex space-x-4">
                                         <button
                                             onClick={() => setShowFinishPopup(false)}
                                             className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
                                         >
-                                            취소
+                                            Cancel
                                         </button>
                                         <button
                                             onClick={() => {
@@ -2101,17 +2101,17 @@ Use markdown formatting for better readability:
                     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-xl shadow-2xl p-12 max-w-2xl w-full text-center">
                             <div className="text-6xl mb-6">🎉</div>
-                            <h1 className="text-4xl font-bold text-gray-800 mb-4">실험 완료!</h1>
+                            <h1 className="text-4xl font-bold text-gray-800 mb-4">Experiment Complete!</h1>
                             <p className="text-gray-600 mb-8">Thank you for participation.</p>
 
                             <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
-                                <h3 className="font-bold text-lg mb-4">요약</h3>
+                                <h3 className="font-bold text-lg mb-4">Summary</h3>
                                 <div className="space-y-2 text-gray-700">
-                                    <p>• 참여자: <strong>{participantId}</strong></p>
-                                    <p>• 조건: <strong>{condition}</strong></p>
-                                    <p>• 논문: <strong>{papers.find(p => p.id === currentPaper)?.name}</strong></p>
-                                    <p>• 퀴즈 응답: <strong>{Object.keys(quizAnswers).length} / {quizQuestions.length}</strong></p>
-                                    <p>• 리뷰 평점: <strong>{reviewData.rating} / 5</strong></p>
+                                    <p>• Participant: <strong>{participantId}</strong></p>
+                                    <p>• Condition: <strong>{condition}</strong></p>
+                                    <p>• Paper: <strong>{papers.find(p => p.id === currentPaper)?.name}</strong></p>
+                                    <p>• Quiz responses: <strong>{Object.keys(quizAnswers).length} / {quizQuestions.length}</strong></p>
+                                    <p>• Review rating: <strong>{reviewData.rating} / 5</strong></p>
                                 </div>
                             </div>
 
@@ -2119,7 +2119,7 @@ Use markdown formatting for better readability:
                                 onClick={returnToStart}
                                 className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-medium"
                             >
-                                처음으로 돌아가기
+                                Return to Start
                             </button>
                         </div>
                     </div>
