@@ -289,7 +289,7 @@
                 const handlePopState = (e) => {
                     window.history.pushState(null, '', window.location.href);
                     const confirmBack = window.confirm(
-                        '뒤로 가시겠습니까?\n\n뒤로 가시면 현재까지의 진행 상황이 저장되지 않습니다.'
+                        'Are you sure you want to go back?\n\nAny unsaved progress will be lost.'
                     );
                     if (confirmBack) {
                         window.history.back();
@@ -823,8 +823,18 @@ ${paperContent.replace(/<[^>]*>/g, '')}
 **Your Role:**
 - Provide clear, accurate, and insightful answers based on the paper
 - Use specific examples and details from the paper when relevant
+- Structure your responses well (use headings, bullet points, numbering when appropriate)
+- If asked to summarize, focus on key contributions, methods, and findings
 - If information is not in the paper, clearly state that
-- Use Korean if the user asks in Korean, English if they ask in English`
+- Use Korean if the user asks in Korean, English if they ask in English
+- Be concise but thorough - aim for clarity over length
+
+**Response Format:**
+Use markdown formatting for better readability:
+- **Bold** for key terms or important points
+- Bullet points for lists
+- Numbered lists for steps or sequences
+- Code blocks for technical details if needed`
                                 },
                                 ...messages.map(msg => ({
                                     role: msg.role,
@@ -880,19 +890,155 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                 }
             };
 
-            // Simple markdown renderer
+            // Markdown renderer with nested lists, tables, blockquotes, and horizontal rules
             const renderMarkdown = (text) => {
                 if (!text) return '';
+
                 let html = text;
+
+                // Code blocks (```code```) - process first to avoid interference
                 html = html.replace(/```([^`]+)```/g, '<pre style="background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0;"><code>$1</code></pre>');
-                html = html.replace(/`([^`]+)`/g, '<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">$1</code>');
+
+                // Inline code (`code`)
+                html = html.replace(/`([^`]+)`/g, '<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 0.9em;">$1</code>');
+
+                // Bold (**text** or __text__)
                 html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
-                html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
-                html = html.replace(/^### (.+)$/gm, '<h3 style="font-size: 1.1em; font-weight: 600; margin: 12px 0 8px 0;">$1</h3>');
-                html = html.replace(/^## (.+)$/gm, '<h2 style="font-size: 1.2em; font-weight: 600; margin: 12px 0 8px 0;">$1</h2>');
-                html = html.replace(/^# (.+)$/gm, '<h1 style="font-size: 1.3em; font-weight: 600; margin: 12px 0 8px 0;">$1</h1>');
-                html = html.replace(/^[\-\*] (.+)$/gm, '<li style="margin-left: 20px;">$1</li>');
-                html = html.replace(/\n/g, '<br>');
+                html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+                // Italic (*text* or _text_) - be careful not to match list items
+                html = html.replace(/(?<![*\-])\*([^\*\n]+)\*(?!\*)/g, '<em>$1</em>');
+                html = html.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<em>$1</em>');
+
+                // Headers (# text) - process from most specific (####) to least specific (#)
+                html = html.replace(/^#### (.+)$/gm, '<h4 style="font-size: 1.1em; font-weight: 600; margin: 12px 0 6px 0;">$1</h4>');
+                html = html.replace(/^### (.+)$/gm, '<h3 style="font-size: 1.2em; font-weight: 600; margin: 14px 0 8px 0;">$1</h3>');
+                html = html.replace(/^## (.+)$/gm, '<h2 style="font-size: 1.35em; font-weight: 600; margin: 16px 0 10px 0;">$1</h2>');
+                html = html.replace(/^# (.+)$/gm, '<h1 style="font-size: 1.5em; font-weight: 600; margin: 16px 0 10px 0;">$1</h1>');
+
+                // Horizontal rule (---, ***, ___)
+                html = html.replace(/^[-*_]{3,}$/gm, '<hr style="border: none; border-top: 1px solid #ddd; margin: 16px 0;">');
+
+                // Process tables
+                html = html.replace(/(?:^|\n)((?:\|[^\n]+\|\n)+)/g, (match, tableContent) => {
+                    const rows = tableContent.trim().split('\n');
+                    if (rows.length < 2) return match;
+
+                    let tableHtml = '<table style="border-collapse: collapse; margin: 12px 0; width: 100%;">';
+
+                    rows.forEach((row, rowIndex) => {
+                        // Skip separator row (|---|---|)
+                        if (row.match(/^\|[\s\-:]+\|$/)) return;
+
+                        const cells = row.split('|').filter(cell => cell !== '');
+                        const tag = rowIndex === 0 ? 'th' : 'td';
+                        const bgColor = rowIndex === 0 ? 'background: #f5f5f5;' : '';
+
+                        tableHtml += '<tr>';
+                        cells.forEach(cell => {
+                            tableHtml += `<${tag} style="border: 1px solid #ddd; padding: 8px; ${bgColor}">${cell.trim()}</${tag}>`;
+                        });
+                        tableHtml += '</tr>';
+                    });
+
+                    tableHtml += '</table>';
+                    return tableHtml;
+                });
+
+                // Process lines for lists and blockquotes
+                const lines = html.split('\n');
+                let result = [];
+                let listStack = []; // Track nested list levels: [{type: 'ul'|'ol', indent: number}]
+                let inBlockquote = false;
+
+                const getIndentLevel = (line) => {
+                    const match = line.match(/^(\s*)/);
+                    return match ? Math.floor(match[1].length / 2) : 0;
+                };
+
+                const closeListsToLevel = (targetLevel) => {
+                    while (listStack.length > targetLevel) {
+                        const list = listStack.pop();
+                        result.push(list.type === 'ul' ? '</ul>' : '</ol>');
+                    }
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const indent = getIndentLevel(line);
+                    const trimmedLine = line.trim();
+
+                    // Blockquote (> text)
+                    const blockquoteMatch = trimmedLine.match(/^>\s*(.*)$/);
+                    if (blockquoteMatch) {
+                        closeListsToLevel(0);
+                        if (!inBlockquote) {
+                            result.push('<blockquote style="border-left: 4px solid #ddd; margin: 12px 0; padding: 8px 16px; color: #666; background: #f9f9f9;">');
+                            inBlockquote = true;
+                        }
+                        result.push(blockquoteMatch[1] + '<br>');
+                        continue;
+                    } else if (inBlockquote) {
+                        result.push('</blockquote>');
+                        inBlockquote = false;
+                    }
+
+                    // Unordered list (- or *)
+                    const unorderedMatch = trimmedLine.match(/^[\-\*]\s+(.+)$/);
+                    // Ordered list (1. 2. etc)
+                    const orderedMatch = trimmedLine.match(/^\d+\.\s+(.+)$/);
+
+                    if (unorderedMatch) {
+                        const targetLevel = indent + 1;
+
+                        // Close lists that are deeper than current
+                        closeListsToLevel(targetLevel);
+
+                        // Open new list if needed
+                        if (listStack.length < targetLevel || listStack[listStack.length - 1]?.type !== 'ul') {
+                            if (listStack.length === targetLevel && listStack[listStack.length - 1]?.type === 'ol') {
+                                result.push('</ol>');
+                                listStack.pop();
+                            }
+                            result.push('<ul style="margin: ' + (listStack.length === 0 ? '8px' : '4px') + ' 0; padding-left: 24px; list-style-type: disc;">');
+                            listStack.push({ type: 'ul', indent });
+                        }
+                        result.push('<li style="margin: 4px 0;">' + unorderedMatch[1] + '</li>');
+                    } else if (orderedMatch) {
+                        const targetLevel = indent + 1;
+
+                        closeListsToLevel(targetLevel);
+
+                        if (listStack.length < targetLevel || listStack[listStack.length - 1]?.type !== 'ol') {
+                            if (listStack.length === targetLevel && listStack[listStack.length - 1]?.type === 'ul') {
+                                result.push('</ul>');
+                                listStack.pop();
+                            }
+                            result.push('<ol style="margin: ' + (listStack.length === 0 ? '8px' : '4px') + ' 0; padding-left: 24px; list-style-type: decimal;">');
+                            listStack.push({ type: 'ol', indent });
+                        }
+                        result.push('<li style="margin: 4px 0;">' + orderedMatch[1] + '</li>');
+                    } else {
+                        // Not a list item - close all lists
+                        closeListsToLevel(0);
+
+                        if (trimmedLine === '') {
+                            result.push('<br>');
+                        } else if (!trimmedLine.startsWith('<')) {
+                            // Regular text (not HTML tag)
+                            result.push(line + '<br>');
+                        } else {
+                            result.push(line);
+                        }
+                    }
+                }
+
+                // Close any remaining open elements
+                closeListsToLevel(0);
+                if (inBlockquote) result.push('</blockquote>');
+
+                html = result.join('');
+
                 return html;
             };
 
@@ -1269,8 +1415,8 @@ ${paperContent.replace(/<[^>]*>/g, '')}
             if (phase === 'reading-guide') {
                 const paper = papers.find(p => p.id === currentPaper);
                 const conditionLabels = {
-                    'without_llm': 'Without AI',
-                    'with_llm': 'With AI Chat',
+                    'without_llm': 'Read the paper without AI assistant.',
+                    'with_llm': 'Read the paper with AI chatbot assistance.',
                     'with_llm_extended': 'With AI Chat + Extended Resources'
                 };
 
@@ -1290,13 +1436,13 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-6">
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">논문 제목</h3>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">Title</h3>
                                     <p className="text-gray-700">{paper?.name}</p>
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-6">
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">제한 시간</h3>
-                                    <p className="text-3xl font-bold text-blue-600">30분</p>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">Time Limit</h3>
+                                    <p className="text-3xl font-bold text-blue-600">20min</p>
                                 </div>
                             </div>
 
@@ -1310,7 +1456,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                 }}
                                 className="w-full px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-medium transition-colors"
                             >
-                                시작하기 →
+                                Start →
                             </button>
                         </div>
                     </div>
@@ -1329,7 +1475,6 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                 <div className="text-center text-gray-500 mt-12">
                                     <div className="text-4xl mb-4">💬</div>
                                     <p className="font-medium">Ask me anything!</p>
-                                    <p className="text-sm mt-2 text-gray-400">논문에 대해 질문하세요</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4 p-4">
@@ -1483,7 +1628,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                         <div className="bg-white shadow-md px-6 py-4 flex items-center justify-between border-b-2">
                             <div>
                                 <h2 className="text-lg font-bold text-gray-800">
-                                    [논문 읽기] {papers.find(p => p.id === currentPaper)?.name}
+                                    [(1/3) Paper Reading] {papers.find(p => p.id === currentPaper)?.name}
                                 </h2>
                                 <p className="text-sm text-gray-600">
                                     {participantId} | {condition} | Section: <strong>{currentSection}</strong>
@@ -1491,7 +1636,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                             </div>
                             <div className="flex items-center space-x-4">
                                 <Timer
-                                    seconds={30 * 60}
+                                    seconds={20 * 60}
                                     isActive={readingActive}
                                     phase="reading"
                                     onComplete={() => alert('Reading time is up!')}
@@ -1622,8 +1767,8 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                         {showFinishPopup && (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                                 <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">리딩 세션을 끝낼까요?</h3>
-                                    <p className="text-gray-600 mb-6">다음 단계로 진행합니다.</p>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">Do you wnat to finish reading session?</h3>
+                                    <p className="text-gray-600 mb-6">Continue to next step</p>
                                     <div className="flex space-x-4">
                                         <button
                                             onClick={() => setShowFinishPopup(false)}
@@ -1655,18 +1800,25 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">📝</div>
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">논문 이해도 퀴즈</h1>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Comprehension Quiz</h1>
                             </div>
 
                             <div className="space-y-6 mb-8">
                                 <div className="bg-gray-50 rounded-lg p-6">
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">안내</h3>
-                                    <p className="text-gray-700">논문을 읽고 이해한 내용을 바탕으로 질문에 답해주세요.</p>
-                                </div>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">Guide</h3>
+                                    <ul>
+                                        <li>
+                                    <p className="text-gray-700">Answer the questions based on your understanding of the paper.</p>
+                                    </li>
+                                    <li>
+                                     <p className="text-gray-700">If you're unsure, please select "Don't know" instead of guessing.</p>   
+                                    </li>
+                                    </ul>
+                                    </div>
 
                                 <div className="bg-gray-50 rounded-lg p-6">
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">제한 시간</h3>
-                                    <p className="text-3xl font-bold text-purple-600">15분</p>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">Time Limit</h3>
+                                    <p className="text-3xl font-bold text-purple-600">15min</p>
                                 </div>
                             </div>
 
@@ -1679,7 +1831,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                 }}
                                 className="w-full px-8 py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-lg font-medium"
                             >
-                                시작하기 →
+                                Start →
                             </button>
                         </div>
                     </div>
@@ -1692,7 +1844,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                     <div className="min-h-screen bg-gray-50">
                         <div className="bg-white shadow-md px-6 py-4 border-b-2 flex items-center justify-between">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-800">문제 풀이</h2>
+                                <h2 className="text-lg font-bold text-gray-800">Comprehension Quiz</h2>
                                 <p className="text-sm text-gray-600">Closed-book</p>
                             </div>
                             <div className="flex items-center space-x-4">
@@ -1796,18 +1948,18 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">✍️</div>
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">논문 리뷰 작성</h1>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Post-reading Task</h1>
                             </div>
 
                             <div className="space-y-6 mb-8">
                                 <div className="bg-gray-50 rounded-lg p-6">
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">안내</h3>
-                                    <p className="text-gray-700">리뷰어의 관점에서 논문을 평가해주세요.</p>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">Guidance</h3>
+                                    <p className="text-gray-700">--</p>
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-6">
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">제한 시간</h3>
-                                    <p className="text-3xl font-bold text-green-600">20분</p>
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">Time Limit</h3>
+                                    <p className="text-3xl font-bold text-green-600">20min</p>
                                 </div>
                             </div>
 
@@ -1820,7 +1972,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                 }}
                                 className="w-full px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 text-lg font-medium"
                             >
-                                시작하기 →
+                                Start →
                             </button>
                         </div>
                     </div>
@@ -1833,7 +1985,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                     <div className="h-screen flex flex-col bg-gray-50">
                         <div className="bg-white shadow-md px-6 py-4 border-b-2 flex items-center justify-between flex-shrink-0">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-800">논문 리뷰 작성</h2>
+                                <h2 className="text-lg font-bold text-gray-800">Post-reading Task</h2>
                                 <p className="text-sm text-gray-600">Open-book</p>
                             </div>
                             <div className="flex items-center space-x-4">
@@ -1933,7 +2085,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                                             }}
                                             className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                                         >
-                                            확인
+                                            Confirm
                                         </button>
                                     </div>
                                 </div>
@@ -1950,7 +2102,7 @@ ${paperContent.replace(/<[^>]*>/g, '')}
                         <div className="bg-white rounded-xl shadow-2xl p-12 max-w-2xl w-full text-center">
                             <div className="text-6xl mb-6">🎉</div>
                             <h1 className="text-4xl font-bold text-gray-800 mb-4">실험 완료!</h1>
-                            <p className="text-gray-600 mb-8">참여해 주셔서 감사합니다.</p>
+                            <p className="text-gray-600 mb-8">Thank you for participation.</p>
 
                             <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
                                 <h3 className="font-bold text-lg mb-4">요약</h3>
