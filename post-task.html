@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Reading Task</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyClsZXLxKOXjUtB5loTfz0__GpJ8AQYEas",
+            authDomain: "aom-paper-understanding.firebaseapp.com",
+            projectId: "aom-paper-understanding",
+            storageBucket: "aom-paper-understanding.firebasestorage.app",
+            messagingSenderId: "668607386746",
+            appId: "1:668607386746:web:dc6711c596542fe1b217c3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function PostTask() {
+            // Get participant info from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const participantId = urlParams.get('participantId');
+            const condition = urlParams.get('condition') || 'without_llm';
+            const paper = urlParams.get('paper') || 'mroz2018';
+            const mode = urlParams.get('mode') || 'experiment';
+
+            // Post-task responses
+            const [newStrategies, setNewStrategies] = useState('');
+            const [thinkingChange, setThinkingChange] = useState('');
+            const [newStrategyConfidence, setNewStrategyConfidence] = useState('');
+            const [implementationLikelihood, setImplementationLikelihood] = useState('');
+
+            useEffect(() => {
+                if (!participantId) {
+                    alert('Missing participant information. Please start from the beginning.');
+                    window.location.href = 'pre-study-survey.html';
+                }
+            }, [participantId]);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+
+                if (!newStrategies.trim()) {
+                    alert('Please describe what you would do differently.');
+                    return;
+                }
+                if (!thinkingChange) {
+                    alert('Please rate how much your thinking has changed.');
+                    return;
+                }
+                if (!newStrategyConfidence) {
+                    alert('Please rate your confidence in new strategies.');
+                    return;
+                }
+                if (!implementationLikelihood) {
+                    alert('Please rate your likelihood to implement changes.');
+                    return;
+                }
+
+                const postTaskData = {
+                    newStrategies: newStrategies.trim(),
+                    thinkingChange: parseInt(thinkingChange),
+                    newStrategyConfidence: parseInt(newStrategyConfidence),
+                    implementationLikelihood: parseInt(implementationLikelihood),
+                    completedAt: new Date().toISOString()
+                };
+
+                try {
+                    const userRef = db.collection('users').doc(participantId);
+                    await userRef.update({
+                        postTask: postTaskData
+                    });
+
+                    console.log('Post-task saved');
+
+                    // Navigate to post-study survey
+                    const params = new URLSearchParams({
+                        participantId,
+                        mode,
+                        condition,
+                        paper
+                    });
+                    window.location.href = `post-study-survey.html?${params.toString()}`;
+
+                } catch (error) {
+                    console.error('Error saving post-task:', error);
+                    alert('Failed to save. Please try again.');
+                }
+            };
+
+            if (!participantId) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <p>Loading...</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 py-8 px-4">
+                    <div className="max-w-3xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-2xl p-8">
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <div className="text-5xl mb-4">🎯</div>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Post-Reading Task</h1>
+                                <p className="text-gray-600">Now that you've read the article, please reflect on what you've learned.</p>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-8">
+                                {/* Context */}
+                                <div className="bg-gray-100 p-5 rounded-xl">
+                                    <h2 className="text-lg font-bold text-gray-800 mb-2">Imagine you want to noticeably improve the effectiveness of an upcoming meeting you will lead at work.</h2>
+                                    <p className="text-gray-600 text-sm">Think about how the article might influence your approach.</p>
+                                </div>
+
+                                {/* Q1: New Strategies */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q1. What, if anything, would you now do <span className="text-teal-600">differently</span> to improve its effectiveness? *
+                                    </label>
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        Based on what you learned from the article, describe any new strategies or changes you would implement.
+                                    </p>
+                                    <textarea
+                                        value={newStrategies}
+                                        onChange={(e) => setNewStrategies(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                                        rows="6"
+                                        placeholder="e.g., I would now create a detailed agenda with time allocations, actively encourage participation from quieter members..."
+                                        required
+                                    />
+                                </div>
+
+                                {/* Q2: Thinking Change */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q2. Compared to before reading the article, how much has your thinking about running effective meetings changed? *
+                                    </label>
+                                    <div className="flex items-center justify-between mt-3">
+                                        <span className="text-xs text-gray-500 w-20">Not at all</span>
+                                        <div className="flex space-x-1">
+                                            {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => setThinkingChange(value.toString())}
+                                                    className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                        thinkingChange === value.toString()
+                                                            ? 'bg-teal-500 text-white'
+                                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                    }`}
+                                                >
+                                                    {value}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <span className="text-xs text-gray-500 w-20 text-right">A great deal</span>
+                                    </div>
+                                </div>
+
+                                {/* Q3: Confidence in New Strategies */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q3. How confident are you that your <span className="text-teal-600">new</span> strategies will improve your upcoming meeting's effectiveness? *
+                                    </label>
+                                    <div className="flex items-center justify-between mt-3">
+                                        <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                        <div className="flex space-x-1">
+                                            {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => setNewStrategyConfidence(value.toString())}
+                                                    className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                        newStrategyConfidence === value.toString()
+                                                            ? 'bg-teal-500 text-white'
+                                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                    }`}
+                                                >
+                                                    {value}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
+                                    </div>
+                                </div>
+
+                                {/* Q4: Implementation Likelihood */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q4. How likely are you to actually implement these changes? *
+                                    </label>
+                                    <div className="flex items-center justify-between mt-3">
+                                        <span className="text-xs text-gray-500 w-20">Very unlikely</span>
+                                        <div className="flex space-x-1">
+                                            {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => setImplementationLikelihood(value.toString())}
+                                                    className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                        implementationLikelihood === value.toString()
+                                                            ? 'bg-teal-500 text-white'
+                                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                    }`}
+                                                >
+                                                    {value}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <span className="text-xs text-gray-500 w-20 text-right">Very likely</span>
+                                    </div>
+                                </div>
+
+                                {/* Submit */}
+                                <div className="pt-6 border-t">
+                                    <button
+                                        type="submit"
+                                        className="w-full bg-teal-500 text-white py-3 px-6 rounded-lg hover:bg-teal-600 font-medium transition-colors text-lg"
+                                    >
+                                        Continue →
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<PostTask />, document.getElementById('root'));
+    </script>
+
+    <!-- Feedback Widget -->
+    <script src="feedback-widget.js"></script>
+</body>
+</html>

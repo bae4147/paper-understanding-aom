@@ -130,7 +130,7 @@
             const focusStartTimeRef = useRef(Date.now());
 
             // Right panel tab state (for with_llm_extended)
-            const [activeTab, setActiveTab] = useState('chat'); // 'infographics', 'video', 'audio', 'simplified', 'chat'
+            const [activeTab, setActiveTab] = useState(null); // 'infographics', 'video', 'audio', 'simplified', 'chat' or null for initial state
 
             // Resource state for extended condition
             const [resourceContent, setResourceContent] = useState({
@@ -207,14 +207,73 @@
             const [quizQuestions, setQuizQuestions] = useState([
                 {
                     id: 1,
-                    question: "Sample question 1?",
-                    options: ["Option A", "Option B", "Option C", "Option D"],
+                    question: "According to Mroz et al. (2018), what percentage of meetings are estimated to be rated as 'poor' by attendees, contributing to significant financial waste for organizations?",
+                    options: ["As many as 50%", "Approximately 75%", "As many as 25%", "Less than 10%"],
+                    correctAnswer: "As many as 50%",
                     type: "multiple_choice"
                 },
                 {
                     id: 2,
-                    question: "Sample question 2?",
-                    type: "short_answer"
+                    question: "The 'science of meetings' is defined as the systematic study of what occurs during which phase(s) of the meeting process?",
+                    options: ["Before, during, and after meetings, as well as their broader organizational context.", "Only the events that happen during the meeting itself.", "Primarily the design and preparation that happens before the meeting.", "Only the outcomes and follow-up actions after the meeting."],
+                    correctAnswer: "Before, during, and after meetings, as well as their broader organizational context.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 3,
+                    question: "Which of the following is identified as a best practice for the 'Before the meeting' phase?",
+                    options: ["Circulating a written agenda in advance to all attendees.", "Intervening when communication patterns become dysfunctional.", "Sending out meeting minutes and action items.", "Actively encouraging everyone to participate."],
+                    correctAnswer: "Circulating a written agenda in advance to all attendees.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 4,
+                    question: "The research of Kauffeld & Lehmann-Willenbrock (2012) found that which of the following interpersonal interactions is contagious and can reduce group outcomes?",
+                    options: ["Seeking feedback from other attendees", "Proposing solutions to problems", "Humor and laughter patterns", "Complaining using 'killer phrases'"],
+                    correctAnswer: "Complaining using 'killer phrases'",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 5,
+                    question: "According to the article, satisfaction with meetings is a significant predictor of what broader employee attitude?",
+                    options: ["Overall job satisfaction", "Trust in senior leadership", "Perceptions of organizational strategy", "Satisfaction with pay and promotion opportunities"],
+                    correctAnswer: "Overall job satisfaction",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 6,
+                    question: "What is one of the primary reasons the article suggests avoiding meetings?",
+                    options: ["When the purpose is to debrief a team after a performance episode.", "When the topic requires input from functionally diverse groups.", "When sharing routine, nonurgent information that doesn't require discussion.", "When leaders need to create and discuss strategic directions."],
+                    correctAnswer: "When sharing routine, nonurgent information that doesn't require discussion.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 7,
+                    question: "What behavior, according to Sonnentag (2001), tends to differentiate high-performing employees from low-performing employees during meetings?",
+                    options: ["High performers tend to arrive late more often.", "High performers contribute more by setting goals and seeking feedback.", "High performers avoid multitasking and distractions.", "High performers complain more about inefficient work processes."],
+                    correctAnswer: "High performers contribute more by setting goals and seeking feedback.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 8,
+                    question: "What is a critical action item for a meeting organizer to complete *after* a meeting has ended to ensure its effectiveness?",
+                    options: ["Following an agenda to keep the meeting on track.", "Starting the meeting on time.", "Ensuring only people with relevant expertise are invited.", "Sending meeting minutes with an action plan to all relevant parties."],
+                    correctAnswer: "Sending meeting minutes with an action plan to all relevant parties.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 9,
+                    question: "According to Allen and Rogelberg (2013), leaders can foster employee engagement through meetings by ensuring the meetings are...",
+                    options: ["virtual, technology-focused, and recorded for later viewing.", "long, detailed, and led with strict authority.", "optional, infrequent, and focused on individual updates.", "relevant, short, and participatory."],
+                    correctAnswer: "relevant, short, and participatory.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 10,
+                    question: "The article suggests a future direction for meeting science is to move away from surveys and toward what kind of research method?",
+                    options: ["Examining video- and audio-recorded behaviors in meetings.", "Historical analysis of meeting minutes from successful companies.", "Conducting more large-scale employee satisfaction surveys.", "Developing more complex theoretical models without empirical testing."],
+                    correctAnswer: "Examining video- and audio-recorded behaviors in meetings.",
+                    type: "multiple_choice"
                 },
             ]);
 
@@ -223,6 +282,11 @@
                 'Abstract': { start: 0, end: 200 },
                 'Introduction': { start: 200, end: 800 },
             });
+
+            // Expose current phase to window for feedback widget
+            useEffect(() => {
+                window.currentPhase = phase;
+            }, [phase]);
 
             // Load resources for extended condition
             useEffect(() => {
@@ -1246,7 +1310,39 @@ Use markdown formatting for better readability:
                 setQuizActive(false);
                 const quizDuration = Date.now() - phaseStartTime.current;
                 phaseTimers.current.quiz = quizDuration;
-                logEvent('quiz_phase_complete', { answers: quizAnswers, duration: quizDuration });
+
+                // Auto-grade quiz
+                let correctCount = 0;
+                let notSureCount = 0;
+                const totalQuestions = quizQuestions.length;
+                const gradingDetails = {};
+
+                quizQuestions.forEach(q => {
+                    const userAnswer = quizAnswers[q.id];
+                    const isNotSure = userAnswer === "Not Sure";
+                    const isCorrect = userAnswer === q.correctAnswer;
+
+                    if (isNotSure) notSureCount++;
+                    if (isCorrect) correctCount++;
+
+                    gradingDetails[q.id] = {
+                        userAnswer: userAnswer || null,
+                        correctAnswer: q.correctAnswer,
+                        isCorrect: isCorrect,
+                        isNotSure: isNotSure
+                    };
+                });
+
+                const accuracy = totalQuestions > 0 ? (correctCount / totalQuestions * 100).toFixed(1) : 0;
+
+                logEvent('quiz_phase_complete', {
+                    answers: quizAnswers,
+                    duration: quizDuration,
+                    correctCount,
+                    notSureCount,
+                    totalQuestions,
+                    accuracy
+                });
 
                 try {
                     if (window.firebaseDb && participantId && sessionId) {
@@ -1258,16 +1354,34 @@ Use markdown formatting for better readability:
                         await window.firebaseUpdateDoc(experimentRef, {
                             'quiz.answers': quizAnswers,
                             'quiz.duration': quizDuration,
+                            'quiz.gradingDetails': gradingDetails,
+                            'quiz.correctCount': correctCount,
+                            'quiz.notSureCount': notSureCount,
+                            'quiz.totalQuestions': totalQuestions,
+                            'quiz.accuracy': parseFloat(accuracy),
                             'quiz.submittedAt': window.firebaseServerTimestamp()
                         });
-                        console.log('✅ Quiz data saved');
+                        console.log('✅ Quiz data saved with grading:', { correctCount, totalQuestions, accuracy: accuracy + '%' });
                     }
                 } catch (error) {
                     console.error('❌ Failed to save quiz data:', error);
                 }
 
-                setPhase('review-guide');
-                logEvent('review_guide_shown');
+                // Redirect to post-task.html
+                logEvent('quiz_completed_redirecting');
+
+                // Set phase to 'complete' to prevent beforeunload warning
+                setPhase('complete');
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const mode = urlParams.get('mode') || 'experiment';
+                const params = new URLSearchParams({
+                    participantId,
+                    mode,
+                    condition,
+                    paper: currentPaper
+                });
+                window.location.href = `post-task.html?${params.toString()}`;
             };
 
             // Handle review change
@@ -1322,7 +1436,7 @@ Use markdown formatting for better readability:
                 setQuizAnswers({});
                 setReviewData({ rating: 0, strengths: '', weaknesses: '', suggestions: '' });
                 setEvents([]);
-                setActiveTab('chat');
+                setActiveTab(null);
                 setResourceContent({ infographics: null, video: null, audio: null, audioType: null, simplified: null });
                 setTabUsageTimes({ infographics: 0, video: 0, audio: 0, simplified: 0, chat: 0 });
                 eventIdCounter.current = 0;
@@ -1474,7 +1588,8 @@ Use markdown formatting for better readability:
                             {messages.length === 0 ? (
                                 <div className="text-center text-gray-500 mt-12">
                                     <div className="text-4xl mb-4">💬</div>
-                                    <p className="font-medium">Ask me anything!</p>
+                                    <p className="font-medium">Chat with the AI assistant</p>
+                                    <p className="text-sm mt-2">Type your questions in the text field below.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4 p-4">
@@ -1628,7 +1743,7 @@ Use markdown formatting for better readability:
                         <div className="bg-white shadow-md px-6 py-4 flex items-center justify-between border-b-2">
                             <div>
                                 <h2 className="text-lg font-bold text-gray-800">
-                                    [(1/3) Paper Reading] {papers.find(p => p.id === currentPaper)?.name}
+                                    [Paper Reading] {papers.find(p => p.id === currentPaper)?.name}
                                 </h2>
                                 <p className="text-sm text-gray-600">
                                     {participantId} | {condition} | Section: <strong>{currentSection}</strong>
@@ -1743,6 +1858,14 @@ Use markdown formatting for better readability:
 
                                             {/* Tab Content */}
                                             <div className="flex-1 flex flex-col overflow-hidden">
+                                                {activeTab === null && (
+                                                    <div className="flex-1 flex flex-col bg-gray-50">
+                                                        <div className="text-center text-gray-500 mt-8">
+                                                            <div className="text-4xl mb-4">👆</div>
+                                                            <p className="font-medium">Use the tabs above to explore different media types.</p>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {activeTab === 'infographics' && infographicsTab}
                                                 {activeTab === 'video' && videoTab}
                                                 {activeTab === 'audio' && audioTab}
@@ -1811,14 +1934,14 @@ Use markdown formatting for better readability:
                                     <p className="text-gray-700">Answer the questions based on your understanding of the paper.</p>
                                     </li>
                                     <li>
-                                     <p className="text-gray-700">If you're unsure, please select "Don't know" instead of guessing.</p>   
+                                     <p className="text-gray-700">If you're unsure, please select "Not Sure" instead of guessing.</p>   
                                     </li>
                                     </ul>
                                     </div>
 
                                 <div className="bg-gray-50 rounded-lg p-6">
                                     <h3 className="font-bold text-lg text-gray-800 mb-2">Time Limit</h3>
-                                    <p className="text-3xl font-bold text-purple-600">15min</p>
+                                    <p className="text-3xl font-bold text-purple-600">5min</p>
                                 </div>
                             </div>
 
@@ -1842,14 +1965,14 @@ Use markdown formatting for better readability:
             if (phase === 'quiz') {
                 return (
                     <div className="min-h-screen bg-gray-50">
-                        <div className="bg-white shadow-md px-6 py-4 border-b-2 flex items-center justify-between">
+                        <div className="bg-white shadow-md px-6 py-4 border-b-2 flex items-center justify-between sticky top-0 z-50">
                             <div>
                                 <h2 className="text-lg font-bold text-gray-800">Comprehension Quiz</h2>
                                 <p className="text-sm text-gray-600">Closed-book</p>
                             </div>
                             <div className="flex items-center space-x-4">
                                 <Timer
-                                    seconds={15 * 60}
+                                    seconds={5 * 60}
                                     isActive={quizActive}
                                     phase="quiz"
                                     onComplete={() => alert('Quiz time is up!')}
@@ -1889,6 +2012,19 @@ Use markdown formatting for better readability:
                                                                 <span className="text-gray-700">{option}</span>
                                                             </label>
                                                         ))}
+                                                        {/* Not Sure option */}
+                                                        <p className="text-xs text-gray-500 mt-4 mb-2">If you're not sure, please select 'Not Sure' below.</p>
+                                                        <label className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer border border-dashed border-gray-400 bg-gray-50">
+                                                            <input
+                                                                type="radio"
+                                                                name={`question-${q.id}`}
+                                                                value="Not Sure"
+                                                                checked={quizAnswers[q.id] === "Not Sure"}
+                                                                onChange={(e) => handleQuizAnswer(q.id, e.target.value)}
+                                                                className="w-4 h-4"
+                                                            />
+                                                            <span className="text-gray-500 italic">Not Sure</span>
+                                                        </label>
                                                     </div>
                                                 ) : (
                                                     <textarea
@@ -2131,5 +2267,8 @@ Use markdown formatting for better readability:
 
         ReactDOM.render(<ReadingExperimentAOM />, document.getElementById('root'));
     </script>
+
+    <!-- Feedback Widget -->
+    <script src="feedback-widget.js"></script>
 </body>
 </html>

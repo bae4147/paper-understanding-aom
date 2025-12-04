@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Reading Task</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyClsZXLxKOXjUtB5loTfz0__GpJ8AQYEas",
+            authDomain: "aom-paper-understanding.firebaseapp.com",
+            projectId: "aom-paper-understanding",
+            storageBucket: "aom-paper-understanding.firebasestorage.app",
+            messagingSenderId: "668607386746",
+            appId: "1:668607386746:web:dc6711c596542fe1b217c3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function PreTask() {
+            // Get participant info from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const participantId = urlParams.get('participantId');
+            const condition = urlParams.get('condition') || 'without_llm';
+            const paper = urlParams.get('paper') || 'mroz2018';
+            const mode = urlParams.get('mode') || 'experiment';
+
+            // Pre-task responses - Before meeting
+            const [strategiesBefore, setStrategiesBefore] = useState('');
+            const [confidenceBefore, setConfidenceBefore] = useState('');
+
+            // Pre-task responses - During meeting
+            const [strategiesDuring, setStrategiesDuring] = useState('');
+            const [confidenceDuring, setConfidenceDuring] = useState('');
+
+            // Pre-task responses - After meeting
+            const [strategiesAfter, setStrategiesAfter] = useState('');
+            const [confidenceAfter, setConfidenceAfter] = useState('');
+
+            // Overall approach clarity
+            const [approachClarity, setApproachClarity] = useState('');
+
+            // Challenges
+            const [challenges, setChallenges] = useState('');
+
+            useEffect(() => {
+                if (!participantId) {
+                    alert('Missing participant information. Please start from the beginning.');
+                    window.location.href = 'pre-study-survey.html';
+                }
+            }, [participantId]);
+
+            // Word count helper
+            const countWords = (text) => {
+                return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+
+                // Validate Before section
+                if (!strategiesBefore.trim()) {
+                    alert('Please describe the strategies you used BEFORE the meeting.');
+                    return;
+                }
+                if (!confidenceBefore) {
+                    alert('Please rate your confidence for BEFORE strategies.');
+                    return;
+                }
+
+                // Validate During section
+                if (!strategiesDuring.trim()) {
+                    alert('Please describe the strategies you used DURING the meeting.');
+                    return;
+                }
+                if (!confidenceDuring) {
+                    alert('Please rate your confidence for DURING strategies.');
+                    return;
+                }
+
+                // Validate After section
+                if (!strategiesAfter.trim()) {
+                    alert('Please describe the strategies you used AFTER the meeting.');
+                    return;
+                }
+                if (!confidenceAfter) {
+                    alert('Please rate your confidence for AFTER strategies.');
+                    return;
+                }
+
+                // Validate approach clarity
+                if (!approachClarity) {
+                    alert('Please rate your approach clarity.');
+                    return;
+                }
+
+                // Validate challenges (min 20 words)
+                if (countWords(challenges) < 20) {
+                    alert('Please describe the challenges in at least 20 words.');
+                    return;
+                }
+
+                const preTaskData = {
+                    before: {
+                        strategies: strategiesBefore.trim(),
+                        confidence: parseInt(confidenceBefore)
+                    },
+                    during: {
+                        strategies: strategiesDuring.trim(),
+                        confidence: parseInt(confidenceDuring)
+                    },
+                    after: {
+                        strategies: strategiesAfter.trim(),
+                        confidence: parseInt(confidenceAfter)
+                    },
+                    approachClarity: parseInt(approachClarity),
+                    challenges: challenges.trim(),
+                    completedAt: new Date().toISOString()
+                };
+
+                try {
+                    const userRef = db.collection('users').doc(participantId);
+                    await userRef.update({
+                        preTask: preTaskData
+                    });
+
+                    console.log('Pre-task saved');
+
+                    // Navigate to main experiment
+                    const params = new URLSearchParams({
+                        participantId,
+                        mode,
+                        condition,
+                        paper
+                    });
+                    window.location.href = `index.html?${params.toString()}`;
+
+                } catch (error) {
+                    console.error('Error saving pre-task:', error);
+                    alert('Failed to save. Please try again.');
+                }
+            };
+
+            if (!participantId) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <p>Loading...</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 py-8 px-4">
+                    <div className="max-w-3xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-2xl p-8">
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <div className="text-5xl mb-4">💭</div>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Pre-Reading Task</h1>
+                                <p className="text-gray-600">Before reading the article, please reflect on your meeting experiences.</p>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-8">
+                                {/* Context */}
+                                <div className="bg-gray-100 p-5 rounded-xl">
+                                    <h2 className="text-lg font-bold text-gray-800 mb-2">Please recall a recent meeting you led at work.</h2>
+                                    <p className="text-gray-600 text-sm">Think about a specific meeting where you were responsible for organizing or facilitating.</p>
+                                </div>
+
+                                {/* Q1: Strategies BEFORE */}
+                                <div className="border-l-4 border-blue-400 pl-4">
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q1. Please list the specific strategies you used to make this meeting more effective <span className="text-blue-600">before</span> the meeting. *
+                                    </label>
+                                    <textarea
+                                        value={strategiesBefore}
+                                        onChange={(e) => setStrategiesBefore(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        rows="4"
+                                        placeholder="e.g., I sent an agenda beforehand, I prepared presentation materials, I invited the right stakeholders..."
+                                        required
+                                    />
+
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Q1-1. How confident are you that these strategies improved the meeting's effectiveness? *
+                                        </label>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                            <div className="flex space-x-1">
+                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() => setConfidenceBefore(value.toString())}
+                                                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                            confidenceBefore === value.toString()
+                                                                ? 'bg-blue-500 text-white'
+                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        {value}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Q2: Strategies DURING */}
+                                <div className="border-l-4 border-green-400 pl-4">
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q2. Please list the specific strategies you used to make this meeting more effective <span className="text-green-600">during</span> the meeting. *
+                                    </label>
+                                    <textarea
+                                        value={strategiesDuring}
+                                        onChange={(e) => setStrategiesDuring(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                        rows="4"
+                                        placeholder="e.g., I started with clear objectives, I kept discussions on track, I encouraged participation from everyone..."
+                                        required
+                                    />
+
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Q2-1. How confident are you that these strategies improved the meeting's effectiveness? *
+                                        </label>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                            <div className="flex space-x-1">
+                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() => setConfidenceDuring(value.toString())}
+                                                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                            confidenceDuring === value.toString()
+                                                                ? 'bg-green-500 text-white'
+                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        {value}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Q3: Strategies AFTER */}
+                                <div className="border-l-4 border-purple-400 pl-4">
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q3. Please list the specific strategies you used to make this meeting more effective <span className="text-purple-600">after</span> the meeting. *
+                                    </label>
+                                    <textarea
+                                        value={strategiesAfter}
+                                        onChange={(e) => setStrategiesAfter(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        rows="4"
+                                        placeholder="e.g., I sent meeting minutes, I followed up on action items, I gathered feedback from participants..."
+                                        required
+                                    />
+
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Q3-1. How confident are you that these strategies improved the meeting's effectiveness? *
+                                        </label>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                            <div className="flex space-x-1">
+                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() => setConfidenceAfter(value.toString())}
+                                                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                            confidenceAfter === value.toString()
+                                                                ? 'bg-purple-500 text-white'
+                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        {value}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Q4: Approach Clarity */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q4. To what extent did you have a clear, intentional approach to running this meeting effectively? *
+                                    </label>
+                                    <div className="flex items-center justify-between mt-3">
+                                        <span className="text-xs text-gray-500 w-24">No clear approach</span>
+                                        <div className="flex space-x-1">
+                                            {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => setApproachClarity(value.toString())}
+                                                    className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                        approachClarity === value.toString()
+                                                            ? 'bg-amber-500 text-white'
+                                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                    }`}
+                                                >
+                                                    {value}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <span className="text-xs text-gray-500 w-24 text-right">Very clear and intentional</span>
+                                    </div>
+                                </div>
+
+                                {/* Q5: Challenges */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                        Q5. Please briefly describe any challenges or difficulties you experienced during this meeting. *
+                                    </label>
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        Minimum 20 words required. Current: <span className={countWords(challenges) >= 20 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{countWords(challenges)}</span> words
+                                    </p>
+                                    <textarea
+                                        value={challenges}
+                                        onChange={(e) => setChallenges(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                        rows="4"
+                                        placeholder="e.g., Some participants were distracted and not engaged. The discussion went off-topic several times. It was difficult to reach consensus on the main decision..."
+                                        required
+                                    />
+                                </div>
+
+                                {/* Submit */}
+                                <div className="pt-6 border-t">
+                                    <button
+                                        type="submit"
+                                        className="w-full bg-amber-500 text-white py-3 px-6 rounded-lg hover:bg-amber-600 font-medium transition-colors text-lg"
+                                    >
+                                        Continue to Reading →
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<PreTask />, document.getElementById('root'));
+    </script>
+
+    <!-- Feedback Widget -->
+    <script src="feedback-widget.js"></script>
+</body>
+</html>
