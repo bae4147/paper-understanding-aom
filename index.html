@@ -283,6 +283,18 @@
                 'Introduction': { start: 200, end: 800 },
             });
 
+            // Initialize from URL parameters (when coming from pre-study-survey)
+            useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const pid = urlParams.get('participantId');
+                const cond = urlParams.get('condition');
+                const paper = urlParams.get('paper');
+
+                if (pid) setParticipantId(pid);
+                if (cond) setCondition(cond);
+                if (paper) setCurrentPaper(paper);
+            }, []);
+
             // Expose current phase to window for feedback widget
             useEffect(() => {
                 window.currentPhase = phase;
