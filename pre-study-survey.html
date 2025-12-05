@@ -56,65 +56,31 @@
                 setMode(urlMode);
             }, []);
 
-            // Section 1: Demographics
-            const [age, setAge] = useState('');
-            const [gender, setGender] = useState('');
-            const [occupation, setOccupation] = useState('');
-            const [occupationOther, setOccupationOther] = useState('');
-            const [industry, setIndustry] = useState('');
-            const [industryOther, setIndustryOther] = useState('');
-
-            // Section 2: Meeting Experience
+            // Section 1: Meeting Experience
             const [meetingsPerWeek, setMeetingsPerWeek] = useState('');
             const [meetingsLed, setMeetingsLed] = useState('');
             const [meetingEffectiveness, setMeetingEffectiveness] = useState('');
             const [meetingTraining, setMeetingTraining] = useState('');
 
+            // Section 2: Demographics (moved to end)
+            const [age, setAge] = useState('');
+            const [workingSituation, setWorkingSituation] = useState('');
+            const [workHoursPerWeek, setWorkHoursPerWeek] = useState('');
 
             const papers = typeof AVAILABLE_PAPERS !== 'undefined' ? AVAILABLE_PAPERS : [];
-
-            const occupationOptions = [
-                'Manager / Team Lead',
-                'Individual Contributor',
-                'Executive / Director',
-                'Consultant',
-                'Entrepreneur / Business Owner',
-                'Student',
-                'Other'
-            ];
-
-            const industryOptions = [
-                'Technology / IT',
-                'Healthcare',
-                'Finance / Banking',
-                'Education',
-                'Manufacturing',
-                'Consulting',
-                'Government / Public Sector',
-                'Retail / E-commerce',
-                'Other'
-            ];
 
 
             // Section validation functions
             const validateSection1 = () => {
-                if (!age || !gender || !occupation || !industry) {
+                if (!meetingsPerWeek || !meetingsLed || !meetingEffectiveness || !meetingTraining) {
                     alert('Please complete all required fields in Section 1.');
-                    return false;
-                }
-                if (occupation === 'Other' && !occupationOther.trim()) {
-                    alert('Please specify your occupation.');
-                    return false;
-                }
-                if (industry === 'Other' && !industryOther.trim()) {
-                    alert('Please specify your industry.');
                     return false;
                 }
                 return true;
             };
 
             const validateSection2 = () => {
-                if (!meetingsPerWeek || !meetingsLed || !meetingEffectiveness || !meetingTraining) {
+                if (!age || !workingSituation || !workHoursPerWeek) {
                     alert('Please complete all required fields in Section 2.');
                     return false;
                 }
@@ -151,17 +117,16 @@
                     condition,
                     paper: currentPaper,
                     mode,
-                    demographics: {
-                        age: parseInt(age),
-                        gender,
-                        occupation: occupation === 'Other' ? occupationOther : occupation,
-                        industry: industry === 'Other' ? industryOther : industry
-                    },
                     meetingExperience: {
                         meetingsPerWeek,
                         meetingsLed,
                         meetingEffectiveness: parseInt(meetingEffectiveness),
                         meetingTraining
+                    },
+                    demographics: {
+                        age: parseInt(age),
+                        workingSituation,
+                        workHoursPerWeek: parseInt(workHoursPerWeek)
                     },
                     surveyCompletedAt: new Date().toISOString()
                 };
@@ -228,8 +193,8 @@
                                 </div>
                                 <div className="flex justify-center mt-3">
                                     <p className="text-sm text-gray-600">
-                                        {currentSection === 1 && 'Section 1: Demographics'}
-                                        {currentSection === 2 && 'Section 2: Meeting Experience'}
+                                        {currentSection === 1 && 'Section 1: Meeting Experience'}
+                                        {currentSection === 2 && 'Section 2: Demographics'}
                                     </p>
                                 </div>
                             </div>
@@ -308,130 +273,10 @@
                                 </div>
                                 )}
 
-                                {/* Section 1: Demographics */}
+                                {/* Section 1: Meeting Experience */}
                                 {currentSection === 1 && (
                                 <div className="border-b pb-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 1. Demographics</h2>
-
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Age *
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={age}
-                                                onChange={(e) => setAge(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="e.g., 35"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Gender *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: 'male', label: 'Male' },
-                                                    { value: 'female', label: 'Female' },
-                                                    { value: 'non-binary', label: 'Non-binary' },
-                                                    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="gender"
-                                                            value={option.value}
-                                                            checked={gender === option.value}
-                                                            onChange={(e) => setGender(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Current Occupation *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {occupationOptions.map(option => (
-                                                    <label key={option} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="occupation"
-                                                            value={option}
-                                                            checked={occupation === option}
-                                                            onChange={(e) => setOccupation(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option}</span>
-                                                    </label>
-                                                ))}
-                                                {occupation === 'Other' && (
-                                                    <input
-                                                        type="text"
-                                                        value={occupationOther}
-                                                        onChange={(e) => setOccupationOther(e.target.value)}
-                                                        className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                        placeholder="Please specify"
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Industry *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {industryOptions.map(option => (
-                                                    <label key={option} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="industry"
-                                                            value={option}
-                                                            checked={industry === option}
-                                                            onChange={(e) => setIndustry(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option}</span>
-                                                    </label>
-                                                ))}
-                                                {industry === 'Other' && (
-                                                    <input
-                                                        type="text"
-                                                        value={industryOther}
-                                                        onChange={(e) => setIndustryOther(e.target.value)}
-                                                        className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                        placeholder="Please specify"
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Section 1 Navigation */}
-                                    <div className="flex justify-end mt-6 pt-6 border-t">
-                                        <button
-                                            type="button"
-                                            onClick={goToNextSection}
-                                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                                        >
-                                            Next →
-                                        </button>
-                                    </div>
-                                </div>
-                                )}
-
-                                {/* Section 2: Meeting Experience */}
-                                {currentSection === 2 && (
-                                <div className="border-b pb-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 2. Meeting Experience</h2>
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 1. Meeting Experience</h2>
 
                                     <div className="space-y-6">
                                         <div>
@@ -536,6 +381,83 @@
                                                     </label>
                                                 ))}
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 1 Navigation */}
+                                    <div className="flex justify-end mt-6 pt-6 border-t">
+                                        <button
+                                            type="button"
+                                            onClick={goToNextSection}
+                                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                                        >
+                                            Next →
+                                        </button>
+                                    </div>
+                                </div>
+                                )}
+
+                                {/* Section 2: Demographics */}
+                                {currentSection === 2 && (
+                                <div className="border-b pb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 2. Demographics</h2>
+
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                What is your age? *
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={age}
+                                                onChange={(e) => setAge(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                placeholder="e.g., 35"
+                                                min="18"
+                                                max="100"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                What is your working situation? *
+                                            </label>
+                                            <div className="space-y-2">
+                                                {[
+                                                    { value: 'full-time', label: 'I work full-time in an organization.' },
+                                                    { value: 'part-time', label: 'I work part-time in an organization.' },
+                                                    { value: 'not-working', label: 'I do not work for any organization.' }
+                                                ].map(option => (
+                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="workingSituation"
+                                                            value={option.value}
+                                                            checked={workingSituation === option.value}
+                                                            onChange={(e) => setWorkingSituation(e.target.value)}
+                                                            className="w-4 h-4"
+                                                        />
+                                                        <span className="text-sm text-gray-700">{option.label}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                How many hours do you work per week on average? *
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={workHoursPerWeek}
+                                                onChange={(e) => setWorkHoursPerWeek(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                placeholder="e.g., 40"
+                                                min="0"
+                                                max="168"
+                                                required
+                                            />
                                         </div>
                                     </div>
 
