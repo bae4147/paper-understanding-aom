@@ -284,6 +284,31 @@
                 background: #fee2e2;
                 color: #ef4444;
             }
+            .feedback-check-btn {
+                position: absolute;
+                top: 8px;
+                right: 32px;
+                background: none;
+                border: none;
+                color: #9ca3af;
+                cursor: pointer;
+                padding: 4px;
+                border-radius: 4px;
+                font-size: 14px;
+                line-height: 1;
+                transition: all 0.2s;
+            }
+            .feedback-check-btn:hover {
+                background: #dcfce7;
+                color: #22c55e;
+            }
+            .feedback-check-btn.checked {
+                color: #22c55e;
+            }
+            .feedback-item.resolved {
+                background: #f0fdf4;
+                border-left: 3px solid #22c55e;
+            }
             .feedback-empty {
                 text-align: center;
                 color: #9ca3af;
@@ -486,8 +511,10 @@
                     minute: '2-digit'
                 });
 
+                const isResolved = data.resolved === true;
                 html += `
-                    <div class="feedback-item" data-id="${id}">
+                    <div class="feedback-item ${isResolved ? 'resolved' : ''}" data-id="${id}">
+                        <button class="feedback-check-btn ${isResolved ? 'checked' : ''}" onclick="toggleFeedbackResolved('${id}', ${!isResolved})" title="${isResolved ? 'Mark as unresolved' : 'Mark as resolved'}">✓</button>
                         <button class="feedback-delete-btn" onclick="deleteFeedback('${id}')">&times;</button>
                         <div class="feedback-item-header">
                             <span class="feedback-item-author ${getAuthorClass(data.author)}">${escapeHtml(data.author)}</span>
@@ -516,6 +543,20 @@
         } catch (error) {
             console.error('Error deleting feedback:', error);
             alert('Failed to delete feedback.');
+        }
+    };
+
+    // Toggle feedback resolved status
+    window.toggleFeedbackResolved = async function(docId, resolved) {
+        try {
+            await db.collection('feedbacks').doc(docId).update({
+                resolved: resolved,
+                resolvedAt: resolved ? new Date() : null
+            });
+            loadFeedbacks();
+        } catch (error) {
+            console.error('Error updating feedback:', error);
+            alert('Failed to update feedback.');
         }
     };
 
