@@ -1468,13 +1468,12 @@ Use markdown formatting for better readability:
                         <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
                             <div className="text-center mb-8">
                                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Reading Experiment</h1>
-                                <p className="text-gray-600">AOM Study</p>
                             </div>
 
                             <div className="space-y-5">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Participant ID *
+                                        Prolific ID *
                                     </label>
                                     <input
                                         type="text"
@@ -1998,10 +1997,10 @@ Use markdown formatting for better readability:
                                                 // Save AI usage directly to Firebase
                                                 try {
                                                     const userRef = window.firebaseDoc(window.firebaseDb, 'users', participantId);
-                                                    await window.firebaseUpdateDoc(userRef, {
+                                                    await window.firebaseSetDoc(userRef, {
                                                         aiUsageDuringReading: usedAiDuringReading,
                                                         aiUsageReportedAt: new Date().toISOString()
-                                                    });
+                                                    }, { merge: true });
                                                     console.log('AI usage saved:', usedAiDuringReading);
                                                 } catch (error) {
                                                     console.error('Error saving AI usage:', error);
