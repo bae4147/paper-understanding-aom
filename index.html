@@ -1993,8 +1993,19 @@ Use markdown formatting for better readability:
                                     </div>
 
                                     <button
-                                        onClick={() => {
+                                        onClick={async () => {
                                             if (usedAiDuringReading) {
+                                                // Save AI usage directly to Firebase
+                                                try {
+                                                    const userRef = window.firebaseDoc(window.firebaseDb, 'users', participantId);
+                                                    await window.firebaseUpdateDoc(userRef, {
+                                                        aiUsageDuringReading: usedAiDuringReading,
+                                                        aiUsageReportedAt: new Date().toISOString()
+                                                    });
+                                                    console.log('AI usage saved:', usedAiDuringReading);
+                                                } catch (error) {
+                                                    console.error('Error saving AI usage:', error);
+                                                }
                                                 logEvent('ai_usage_reported', { usedAi: usedAiDuringReading });
                                                 setShowAiUsagePopup(false);
                                                 completeReading();
