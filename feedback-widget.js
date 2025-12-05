@@ -306,8 +306,13 @@
                 color: #22c55e;
             }
             .feedback-item.resolved {
-                background: #f0fdf4;
-                border-left: 3px solid #22c55e;
+                background: #f9fafb;
+                border-left: 3px solid #d1d5db;
+                opacity: 0.6;
+            }
+            .feedback-item.resolved .feedback-content,
+            .feedback-item.resolved .feedback-meta {
+                color: #9ca3af;
             }
             .feedback-empty {
                 text-align: center;
