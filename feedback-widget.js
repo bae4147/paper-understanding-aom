@@ -284,25 +284,30 @@
                 background: #fee2e2;
                 color: #ef4444;
             }
-            .feedback-check-btn {
-                position: absolute;
-                top: 8px;
-                right: 32px;
+            .feedback-done-btn {
+                display: flex;
+                align-items: center;
+                gap: 4px;
                 background: none;
-                border: none;
+                border: 1px solid #d1d5db;
                 color: #9ca3af;
                 cursor: pointer;
-                padding: 4px;
+                padding: 4px 8px;
                 border-radius: 4px;
-                font-size: 14px;
+                font-size: 11px;
                 line-height: 1;
                 transition: all 0.2s;
+                margin-top: 8px;
+                margin-left: auto;
             }
-            .feedback-check-btn:hover {
+            .feedback-done-btn:hover {
                 background: #dcfce7;
+                border-color: #22c55e;
                 color: #22c55e;
             }
-            .feedback-check-btn.checked {
+            .feedback-done-btn.checked {
+                background: #dcfce7;
+                border-color: #22c55e;
                 color: #22c55e;
             }
             .feedback-item.resolved {
@@ -519,7 +524,6 @@
                 const isResolved = data.resolved === true;
                 html += `
                     <div class="feedback-item ${isResolved ? 'resolved' : ''}" data-id="${id}">
-                        <button class="feedback-check-btn ${isResolved ? 'checked' : ''}" onclick="toggleFeedbackResolved('${id}', ${!isResolved})" title="${isResolved ? 'Mark as unresolved' : 'Mark as resolved'}">✓</button>
                         <button class="feedback-delete-btn" onclick="deleteFeedback('${id}')">&times;</button>
                         <div class="feedback-item-header">
                             <span class="feedback-item-author ${getAuthorClass(data.author)}">${escapeHtml(data.author)}</span>
@@ -527,6 +531,10 @@
                         </div>
                         <div class="feedback-item-content">${escapeHtml(data.content)}</div>
                         <div class="feedback-item-page">${escapeHtml(data.page)}</div>
+                        <button class="feedback-done-btn ${isResolved ? 'checked' : ''}" onclick="toggleFeedbackResolved('${id}', ${!isResolved})" title="${isResolved ? 'Mark as unresolved' : 'Mark as resolved'}">
+                            <span>✓</span>
+                            <span>Done</span>
+                        </button>
                     </div>
                 `;
             });
