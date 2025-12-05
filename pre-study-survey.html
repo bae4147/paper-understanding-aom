@@ -60,6 +60,49 @@
             const [meetingsLed, setMeetingsLed] = useState('');
             const [meetingEffectiveness, setMeetingEffectiveness] = useState('');
 
+            // AI Usage
+            const [aiPurposes, setAiPurposes] = useState([]);
+            const [aiPurposeRatings, setAiPurposeRatings] = useState({});
+            const [aiPurposeOther, setAiPurposeOther] = useState('');
+
+            const aiPurposeOptions = [
+                'Writing assistance',
+                'Research/Information gathering',
+                'Coding assistance',
+                'Brainstorming/Ideation',
+                'Summarization',
+                'Translation',
+                'Meeting preparation/follow-up'
+            ];
+
+            const handleAiPurposeToggle = (purpose) => {
+                setAiPurposes(prev => {
+                    const isSelected = prev.includes(purpose);
+                    if (isSelected) {
+                        const newRatings = { ...aiPurposeRatings };
+                        delete newRatings[purpose];
+                        setAiPurposeRatings(newRatings);
+                        return prev.filter(p => p !== purpose);
+                    } else {
+                        setAiPurposeRatings(prev => ({
+                            ...prev,
+                            [purpose]: { usefulness: '', trust: '' }
+                        }));
+                        return [...prev, purpose];
+                    }
+                });
+            };
+
+            const handlePurposeRatingChange = (purpose, type, value) => {
+                setAiPurposeRatings(prev => ({
+                    ...prev,
+                    [purpose]: {
+                        ...prev[purpose],
+                        [type]: value
+                    }
+                }));
+            };
+
             // Loading state
             const [isLoading, setIsLoading] = useState(false);
 
@@ -96,6 +139,14 @@
                         meetingsPerWeek,
                         meetingsLed,
                         meetingEffectiveness: parseInt(meetingEffectiveness)
+                    },
+                    aiUsage: {
+                        purposes: aiPurposes.map(purpose => ({
+                            name: purpose,
+                            otherText: purpose === 'Other' ? aiPurposeOther : null,
+                            usefulness: parseInt(aiPurposeRatings[purpose]?.usefulness) || null,
+                            trust: parseInt(aiPurposeRatings[purpose]?.trust) || null
+                        }))
                     },
                     surveyCompletedAt: new Date().toISOString()
                 };
@@ -292,6 +343,164 @@
                                                 </div>
                                                 <span className="text-xs text-gray-500">Very effective</span>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* AI Usage Section */}
+                                <div className="border-b pb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4">AI Usage at Work</h2>
+                                    <p className="text-sm text-gray-600 mb-6">
+                                        Please select the purposes for which you use AI tools (e.g., ChatGPT, Claude, Gemini) at work. For each selected purpose, rate how useful and trustworthy you find AI.
+                                    </p>
+
+                                    <div className="space-y-4">
+                                        {aiPurposeOptions.map(purpose => (
+                                            <div key={purpose} className="border-l-2 border-gray-200 pl-4">
+                                                <label className="flex items-center space-x-2 mb-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={aiPurposes.includes(purpose)}
+                                                        onChange={() => handleAiPurposeToggle(purpose)}
+                                                        className="w-4 h-4"
+                                                    />
+                                                    <span className="text-sm font-medium text-gray-700">{purpose}</span>
+                                                </label>
+
+                                                {aiPurposes.includes(purpose) && (
+                                                    <div className="ml-6 space-y-3 bg-gray-50 p-3 rounded">
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-gray-600 mb-2">
+                                                                Usefulness: How useful is AI for this purpose?
+                                                            </label>
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs text-gray-400">Not useful at all</span>
+                                                                <div className="flex space-x-1">
+                                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                                        <button
+                                                                            key={value}
+                                                                            type="button"
+                                                                            onClick={() => handlePurposeRatingChange(purpose, 'usefulness', value.toString())}
+                                                                            className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
+                                                                                aiPurposeRatings[purpose]?.usefulness === value.toString()
+                                                                                    ? 'bg-blue-600 text-white'
+                                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                            }`}
+                                                                        >
+                                                                            {value}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                                <span className="text-xs text-gray-400">Very useful</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-gray-600 mb-2">
+                                                                Trust: How much do you trust AI results for this purpose?
+                                                            </label>
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs text-gray-400">Do not trust at all</span>
+                                                                <div className="flex space-x-1">
+                                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                                        <button
+                                                                            key={value}
+                                                                            type="button"
+                                                                            onClick={() => handlePurposeRatingChange(purpose, 'trust', value.toString())}
+                                                                            className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
+                                                                                aiPurposeRatings[purpose]?.trust === value.toString()
+                                                                                    ? 'bg-blue-600 text-white'
+                                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                            }`}
+                                                                        >
+                                                                            {value}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                                <span className="text-xs text-gray-400">Trust completely</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {/* Other option */}
+                                        <div className="border-l-2 border-gray-200 pl-4">
+                                            <div className="flex items-start space-x-2 mb-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={aiPurposes.includes('Other')}
+                                                    onChange={() => handleAiPurposeToggle('Other')}
+                                                    className="w-4 h-4 mt-1"
+                                                />
+                                                <div className="flex-1">
+                                                    <span className="text-sm font-medium text-gray-700">Other:</span>
+                                                    <input
+                                                        type="text"
+                                                        value={aiPurposeOther}
+                                                        onChange={(e) => setAiPurposeOther(e.target.value)}
+                                                        className="w-full mt-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                                        placeholder="Please specify"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {aiPurposes.includes('Other') && (
+                                                <div className="ml-6 space-y-3 bg-gray-50 p-3 rounded">
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-600 mb-2">
+                                                            Usefulness: How useful is AI for this purpose?
+                                                        </label>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-400">Not useful at all</span>
+                                                            <div className="flex space-x-1">
+                                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                                    <button
+                                                                        key={value}
+                                                                        type="button"
+                                                                        onClick={() => handlePurposeRatingChange('Other', 'usefulness', value.toString())}
+                                                                        className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
+                                                                            aiPurposeRatings['Other']?.usefulness === value.toString()
+                                                                                ? 'bg-blue-600 text-white'
+                                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                        }`}
+                                                                    >
+                                                                        {value}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <span className="text-xs text-gray-400">Very useful</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-600 mb-2">
+                                                            Trust: How much do you trust AI results for this purpose?
+                                                        </label>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-400">Do not trust at all</span>
+                                                            <div className="flex space-x-1">
+                                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                                    <button
+                                                                        key={value}
+                                                                        type="button"
+                                                                        onClick={() => handlePurposeRatingChange('Other', 'trust', value.toString())}
+                                                                        className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
+                                                                            aiPurposeRatings['Other']?.trust === value.toString()
+                                                                                ? 'bg-blue-600 text-white'
+                                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                        }`}
+                                                                    >
+                                                                        {value}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <span className="text-xs text-gray-400">Trust completely</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
