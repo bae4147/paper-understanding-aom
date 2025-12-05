@@ -109,9 +109,9 @@
                     return;
                 }
 
-                // Validate challenges (min 20 words)
-                if (countWords(challenges) < 20) {
-                    alert('Please describe the challenges in at least 20 words.');
+                // Validate challenges (min 10 words)
+                if (countWords(challenges) < 10) {
+                    alert('Please describe the challenges in at least 10 words.');
                     return;
                 }
 
@@ -338,7 +338,7 @@
                                         Q5. Please briefly describe any challenges or difficulties you experienced during this meeting. *
                                     </label>
                                     <p className="text-xs text-gray-500 mb-3">
-                                        Minimum 20 words required. Current: <span className={countWords(challenges) >= 20 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{countWords(challenges)}</span> words
+                                        Minimum 10 words required. Current: <span className={countWords(challenges) >= 10 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{countWords(challenges)}</span> words
                                     </p>
                                     <textarea
                                         value={challenges}
