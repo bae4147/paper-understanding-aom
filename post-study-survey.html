@@ -72,6 +72,9 @@
             const [llmComfortActing, setLlmComfortActing] = useState('');
             const [llmComfortUsing, setLlmComfortUsing] = useState('');
 
+            // Study feedback (optional)
+            const [studyFeedback, setStudyFeedback] = useState('');
+
             useEffect(() => {
                 if (!participantId) {
                     alert('Missing participant information. Please start from the beginning.');
@@ -118,6 +121,7 @@
                         },
                         quizConfidence: parseInt(quizConfidence)
                     },
+                    studyFeedback: studyFeedback.trim() || null,
                     surveyCompletedAt: new Date().toISOString()
                 };
 
@@ -800,6 +804,23 @@
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Study Feedback (Optional) */}
+                                <div className="border-b pb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Study Feedback (Optional)</h2>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                                            Do you have any feedback about this study? (e.g., any problem, confusion, or issue)
+                                        </label>
+                                        <textarea
+                                            value={studyFeedback}
+                                            onChange={(e) => setStudyFeedback(e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            rows="4"
+                                            placeholder="Please share any feedback about your experience..."
+                                        />
+                                    </div>
+                                </div>
 
                                 {/* Submit */}
                                 <div className="pt-6">
