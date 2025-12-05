@@ -59,7 +59,6 @@
             const [meetingsPerWeek, setMeetingsPerWeek] = useState('');
             const [meetingsLed, setMeetingsLed] = useState('');
             const [meetingEffectiveness, setMeetingEffectiveness] = useState('');
-            const [meetingTraining, setMeetingTraining] = useState('');
 
             // Loading state
             const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +67,7 @@
 
             // Validation
             const validateForm = () => {
-                if (!meetingsPerWeek || !meetingsLed || !meetingEffectiveness || !meetingTraining) {
+                if (!meetingsPerWeek || !meetingsLed || !meetingEffectiveness) {
                     alert('Please complete all required fields.');
                     return false;
                 }
@@ -96,8 +95,7 @@
                     meetingExperience: {
                         meetingsPerWeek,
                         meetingsLed,
-                        meetingEffectiveness: parseInt(meetingEffectiveness),
-                        meetingTraining
+                        meetingEffectiveness: parseInt(meetingEffectiveness)
                     },
                     surveyCompletedAt: new Date().toISOString()
                 };
@@ -208,11 +206,15 @@
                                 {/* Meeting Experience */}
                                 <div className="border-b pb-6">
                                     <h2 className="text-xl font-bold text-gray-800 mb-4">Meeting Experience</h2>
+                                    <p className="text-sm text-gray-600 mb-6">
+                                        The following questions ask about your meeting experiences <span className="font-bold">before</span>, <span className="font-bold">during</span>, and <span className="font-bold">after</span> meetings.
+                                    </p>
 
                                     <div className="space-y-6">
+                                        {/* Before */}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                1. On average, how many meetings do you attend per week? *
+                                                1. <span className="font-bold">Before</span>: On average, how many meetings do you attend per week? *
                                             </label>
                                             <div className="space-y-2">
                                                 {[
@@ -237,9 +239,10 @@
                                             </div>
                                         </div>
 
+                                        {/* During */}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                2. How many meetings do you typically lead or facilitate per week? *
+                                                2. <span className="font-bold">During</span>: How many meetings do you typically lead or facilitate per week? *
                                             </label>
                                             <div className="space-y-2">
                                                 {[
@@ -264,9 +267,10 @@
                                             </div>
                                         </div>
 
+                                        {/* After */}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                3. How would you rate the overall effectiveness of meetings at your workplace? *
+                                                3. <span className="font-bold">After</span>: How would you rate the overall effectiveness of meetings at your workplace? *
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Very ineffective</span>
@@ -287,30 +291,6 @@
                                                     ))}
                                                 </div>
                                                 <span className="text-xs text-gray-500">Very effective</span>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                4. Have you ever received formal training on running effective meetings? *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: 'yes', label: 'Yes' },
-                                                    { value: 'no', label: 'No' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="meetingTraining"
-                                                            value={option.value}
-                                                            checked={meetingTraining === option.value}
-                                                            onChange={(e) => setMeetingTraining(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
                                             </div>
                                         </div>
                                     </div>
