@@ -1359,6 +1359,9 @@ Use markdown formatting for better readability:
                     accuracy
                 });
 
+                // Set phase to 'complete' FIRST to prevent beforeunload warning
+                setPhase('complete');
+
                 try {
                     if (window.firebaseDb && participantId && sessionId) {
                         const experimentRef = window.firebaseDoc(
@@ -1384,9 +1387,6 @@ Use markdown formatting for better readability:
 
                 // Redirect to post-task.html
                 logEvent('quiz_completed_redirecting');
-
-                // Set phase to 'complete' to prevent beforeunload warning
-                setPhase('complete');
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const mode = urlParams.get('mode') || 'experiment';
@@ -1528,9 +1528,8 @@ Use markdown formatting for better readability:
                                 <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                                     <p className="text-sm text-gray-700">
                                         <strong>Experiment Structure:</strong><br/>
-                                        1. Reading (30 min)<br/>
-                                        2. Quiz (15 min)<br/>
-                                        3. Review Writing (20 min)
+                                        1. Reading (20 min)<br/>
+                                        2. Quiz (5 min)<br/>
                                     </p>
                                 </div>
                             </div>
