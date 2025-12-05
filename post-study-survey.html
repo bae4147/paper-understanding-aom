@@ -75,6 +75,10 @@
             // Study feedback (optional)
             const [studyFeedback, setStudyFeedback] = useState('');
 
+            // AI Usage section
+            const [llmFrequency, setLlmFrequency] = useState('');
+            const [aiToolsUsed, setAiToolsUsed] = useState('');
+
             useEffect(() => {
                 if (!participantId) {
                     alert('Missing participant information. Please start from the beginning.');
@@ -88,7 +92,7 @@
                 // Validation for required fields
                 if (!mentalDemand || !physicalDemand || !temporalDemand || !performance || !effort || !frustration ||
                     !overallComprehension || !keyConceptsUnderstanding || !findingsUnderstanding || !practicalApplications ||
-                    !quizConfidence) {
+                    !quizConfidence || !llmFrequency) {
                     alert('Please complete all required fields.');
                     return;
                 }
@@ -120,6 +124,10 @@
                             practicalApplications: parseInt(practicalApplications)
                         },
                         quizConfidence: parseInt(quizConfidence)
+                    },
+                    aiUsage: {
+                        frequency: llmFrequency,
+                        toolsUsed: aiToolsUsed.trim() || null
                     },
                     studyFeedback: studyFeedback.trim() || null,
                     surveyCompletedAt: new Date().toISOString()
@@ -804,6 +812,55 @@
                                         </div>
                                     </div>
                                 )}
+
+                                {/* AI Usage Section */}
+                                <div className="border-b pb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-2">{isWithLLM ? 'Section 5' : 'Section 3'}. AI Usage</h2>
+                                    <p className="text-sm text-gray-600 mb-4">Please tell us about your general AI usage at work.</p>
+
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                How often do you use AI language models (e.g., ChatGPT, Claude, Gemini) for work? *
+                                            </label>
+                                            <div className="space-y-2">
+                                                {[
+                                                    { value: 'never', label: 'Never' },
+                                                    { value: 'rarely', label: 'Rarely (a few times a month)' },
+                                                    { value: 'sometimes', label: 'Sometimes (a few times a week)' },
+                                                    { value: 'often', label: 'Often (daily)' },
+                                                    { value: 'very-often', label: 'Very often (multiple times a day)' }
+                                                ].map(option => (
+                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="llmFrequency"
+                                                            value={option.value}
+                                                            checked={llmFrequency === option.value}
+                                                            onChange={(e) => setLlmFrequency(e.target.value)}
+                                                            className="w-4 h-4"
+                                                        />
+                                                        <span className="text-sm text-gray-700">{option.label}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                What AI tools do you use at work? (Optional)
+                                            </label>
+                                            <p className="text-xs text-gray-600 mb-2">AI refers to Artificial Intelligence</p>
+                                            <textarea
+                                                value={aiToolsUsed}
+                                                onChange={(e) => setAiToolsUsed(e.target.value)}
+                                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                rows="3"
+                                                placeholder="e.g., ChatGPT, Claude, Copilot, Gemini..."
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {/* Study Feedback (Optional) */}
                                 <div className="border-b pb-6">

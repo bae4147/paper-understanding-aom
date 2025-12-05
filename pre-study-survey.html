@@ -70,11 +70,6 @@
             const [meetingEffectiveness, setMeetingEffectiveness] = useState('');
             const [meetingTraining, setMeetingTraining] = useState('');
 
-            // Section 3: LLM Usage
-            const [llmFrequency, setLlmFrequency] = useState('');
-            const [llmPurpose, setLlmPurpose] = useState([]);
-            const [llmPurposeOther, setLlmPurposeOther] = useState('');
-            const [llmPurposeRatings, setLlmPurposeRatings] = useState({});
 
             const papers = typeof AVAILABLE_PAPERS !== 'undefined' ? AVAILABLE_PAPERS : [];
 
@@ -100,15 +95,6 @@
                 'Other'
             ];
 
-            const llmPurposeOptions = [
-                'Summarization',
-                'Translation',
-                'Coding assistance',
-                'Brainstorming / Ideation',
-                'Research / Information gathering',
-                'Writing assistance',
-                'Learning new topics'
-            ];
 
             // Section validation functions
             const validateSection1 = () => {
@@ -135,20 +121,9 @@
                 return true;
             };
 
-            const validateSection3 = () => {
-                if (!llmFrequency) {
-                    alert('Please complete all required fields in Section 3.');
-                    return false;
-                }
-                return true;
-            };
-
             const goToNextSection = () => {
                 if (currentSection === 1 && validateSection1()) {
                     setCurrentSection(2);
-                    window.scrollTo(0, 0);
-                } else if (currentSection === 2 && validateSection2()) {
-                    setCurrentSection(3);
                     window.scrollTo(0, 0);
                 }
             };
@@ -160,34 +135,6 @@
                 }
             };
 
-            const handleLlmPurposeToggle = (purpose) => {
-                setLlmPurpose(prev => {
-                    const isSelected = prev.includes(purpose);
-                    if (isSelected) {
-                        const newRatings = { ...llmPurposeRatings };
-                        delete newRatings[purpose];
-                        setLlmPurposeRatings(newRatings);
-                        return prev.filter(p => p !== purpose);
-                    } else {
-                        setLlmPurposeRatings(prev => ({
-                            ...prev,
-                            [purpose]: { trust: '', usefulness: '' }
-                        }));
-                        return [...prev, purpose];
-                    }
-                });
-            };
-
-            const handlePurposeRatingChange = (purpose, type, value) => {
-                setLlmPurposeRatings(prev => ({
-                    ...prev,
-                    [purpose]: {
-                        ...prev[purpose],
-                        [type]: value
-                    }
-                }));
-            };
-
             const handleSubmit = async (e) => {
                 e.preventDefault();
 
@@ -195,7 +142,7 @@
                     alert('Please enter your Participant ID.');
                     return;
                 }
-                if (!validateSection3()) {
+                if (!validateSection2()) {
                     return;
                 }
 
@@ -215,15 +162,6 @@
                         meetingsLed,
                         meetingEffectiveness: parseInt(meetingEffectiveness),
                         meetingTraining
-                    },
-                    llmUsage: {
-                        frequency: llmFrequency,
-                        purposes: llmPurpose.map(purpose => ({
-                            name: purpose,
-                            otherText: purpose === 'Other' ? llmPurposeOther : null,
-                            trust: parseInt(llmPurposeRatings[purpose]?.trust || 0),
-                            usefulness: parseInt(llmPurposeRatings[purpose]?.usefulness || 0)
-                        }))
                     },
                     surveyCompletedAt: new Date().toISOString()
                 };
@@ -269,7 +207,7 @@
                             {/* Progress Indicator */}
                             <div className="mb-8">
                                 <div className="flex items-center justify-center space-x-4">
-                                    {[1, 2, 3].map((step) => (
+                                    {[1, 2].map((step) => (
                                         <div key={step} className="flex items-center">
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
                                                 currentSection === step
@@ -280,7 +218,7 @@
                                             }`}>
                                                 {currentSection > step ? '✓' : step}
                                             </div>
-                                            {step < 3 && (
+                                            {step < 2 && (
                                                 <div className={`w-16 h-1 mx-2 ${
                                                     currentSection > step ? 'bg-green-500' : 'bg-gray-200'
                                                 }`} />
@@ -292,7 +230,6 @@
                                     <p className="text-sm text-gray-600">
                                         {currentSection === 1 && 'Section 1: Demographics'}
                                         {currentSection === 2 && 'Section 2: Meeting Experience'}
-                                        {currentSection === 3 && 'Section 3: LLM Usage'}
                                     </p>
                                 </div>
                             </div>
@@ -603,213 +540,6 @@
                                     </div>
 
                                     {/* Section 2 Navigation */}
-                                    <div className="flex justify-between mt-6 pt-6 border-t">
-                                        <button
-                                            type="button"
-                                            onClick={goToPreviousSection}
-                                            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
-                                        >
-                                            ← Back
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={goToNextSection}
-                                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                                        >
-                                            Next →
-                                        </button>
-                                    </div>
-                                </div>
-                                )}
-
-                                {/* Section 3: LLM Usage */}
-                                {currentSection === 3 && (
-                                <div className="border-b pb-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 3. LLM Usage</h2>
-
-                                    <div className="space-y-6">
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                How often do you use AI language models (e.g., ChatGPT, Claude, Gemini) for work? *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: 'never', label: 'Never' },
-                                                    { value: 'rarely', label: 'Rarely (a few times a month)' },
-                                                    { value: 'sometimes', label: 'Sometimes (a few times a week)' },
-                                                    { value: 'often', label: 'Often (daily)' },
-                                                    { value: 'very-often', label: 'Very often (multiple times a day)' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="llmFrequency"
-                                                            value={option.value}
-                                                            checked={llmFrequency === option.value}
-                                                            onChange={(e) => setLlmFrequency(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-3">
-                                                What do you primarily use LLMs for? (Select all that apply)
-                                            </label>
-                                            <div className="space-y-4">
-                                                {llmPurposeOptions.map(purpose => (
-                                                    <div key={purpose} className="border-l-2 border-gray-200 pl-4">
-                                                        <label className="flex items-center space-x-2 mb-3">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={llmPurpose.includes(purpose)}
-                                                                onChange={() => handleLlmPurposeToggle(purpose)}
-                                                                className="w-4 h-4"
-                                                            />
-                                                            <span className="text-sm font-medium text-gray-700">{purpose}</span>
-                                                        </label>
-
-                                                        {llmPurpose.includes(purpose) && (
-                                                            <div className="ml-6 space-y-3 bg-gray-50 p-3 rounded">
-                                                                <div>
-                                                                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                                                                        Usefulness: How useful is the LLM for this purpose?
-                                                                    </label>
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="text-xs text-gray-400">Not useful at all</span>
-                                                                        <div className="flex space-x-1">
-                                                                            {[1, 2, 3, 4, 5].map(value => (
-                                                                                <button
-                                                                                    key={value}
-                                                                                    type="button"
-                                                                                    onClick={() => handlePurposeRatingChange(purpose, 'usefulness', value.toString())}
-                                                                                    className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
-                                                                                        llmPurposeRatings[purpose]?.usefulness === value.toString()
-                                                                                            ? 'bg-blue-600 text-white'
-                                                                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                                                    }`}
-                                                                                >
-                                                                                    {value}
-                                                                                </button>
-                                                                            ))}
-                                                                        </div>
-                                                                        <span className="text-xs text-gray-400">Very useful</span>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div>
-                                                                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                                                                        Trust: How much do you trust the LLM's output for this purpose?
-                                                                    </label>
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="text-xs text-gray-400">Do not trust at all</span>
-                                                                        <div className="flex space-x-1">
-                                                                            {[1, 2, 3, 4, 5].map(value => (
-                                                                                <button
-                                                                                    key={value}
-                                                                                    type="button"
-                                                                                    onClick={() => handlePurposeRatingChange(purpose, 'trust', value.toString())}
-                                                                                    className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
-                                                                                        llmPurposeRatings[purpose]?.trust === value.toString()
-                                                                                            ? 'bg-blue-600 text-white'
-                                                                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                                                    }`}
-                                                                                >
-                                                                                    {value}
-                                                                                </button>
-                                                                            ))}
-                                                                        </div>
-                                                                        <span className="text-xs text-gray-400">Fully trust</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                                <div className="border-l-2 border-gray-200 pl-4">
-                                                    <div className="flex items-start space-x-2 mb-3">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={llmPurpose.includes('Other')}
-                                                            onChange={() => handleLlmPurposeToggle('Other')}
-                                                            className="w-4 h-4 mt-1"
-                                                        />
-                                                        <div className="flex-1">
-                                                            <span className="text-sm font-medium text-gray-700">Other:</span>
-                                                            <input
-                                                                type="text"
-                                                                value={llmPurposeOther}
-                                                                onChange={(e) => setLlmPurposeOther(e.target.value)}
-                                                                className="w-full mt-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                                                                placeholder="Please specify"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {llmPurpose.includes('Other') && (
-                                                        <div className="ml-6 space-y-3 bg-gray-50 p-3 rounded">
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-600 mb-2">
-                                                                    Usefulness: How useful is the LLM for this purpose?
-                                                                </label>
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-xs text-gray-400">Not useful at all</span>
-                                                                    <div className="flex space-x-1">
-                                                                        {[1, 2, 3, 4, 5].map(value => (
-                                                                            <button
-                                                                                key={value}
-                                                                                type="button"
-                                                                                onClick={() => handlePurposeRatingChange('Other', 'usefulness', value.toString())}
-                                                                                className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
-                                                                                    llmPurposeRatings['Other']?.usefulness === value.toString()
-                                                                                        ? 'bg-blue-600 text-white'
-                                                                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                                                }`}
-                                                                            >
-                                                                                {value}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                    <span className="text-xs text-gray-400">Very useful</span>
-                                                                </div>
-                                                            </div>
-
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-600 mb-2">
-                                                                    Trust: How much do you trust the LLM's output for this purpose?
-                                                                </label>
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-xs text-gray-400">Do not trust at all</span>
-                                                                    <div className="flex space-x-1">
-                                                                        {[1, 2, 3, 4, 5].map(value => (
-                                                                            <button
-                                                                                key={value}
-                                                                                type="button"
-                                                                                onClick={() => handlePurposeRatingChange('Other', 'trust', value.toString())}
-                                                                                className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
-                                                                                    llmPurposeRatings['Other']?.trust === value.toString()
-                                                                                        ? 'bg-blue-600 text-white'
-                                                                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                                                }`}
-                                                                            >
-                                                                                {value}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                    <span className="text-xs text-gray-400">Fully trust</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Section 3 Navigation */}
                                     <div className="flex justify-between mt-6 pt-6 border-t">
                                         <button
                                             type="button"
