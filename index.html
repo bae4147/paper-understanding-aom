@@ -119,6 +119,7 @@
             const [showAiUsagePopup, setShowAiUsagePopup] = useState(false); // AI usage check popup for without_llm
             const [usedAiDuringReading, setUsedAiDuringReading] = useState(null); // null, 'yes', 'no'
             const [noAiAgreed, setNoAiAgreed] = useState(false); // For without_llm condition warning
+            const [isRedirecting, setIsRedirecting] = useState(false); // To skip beforeunload during redirect
 
             // Reading phase state
             const [scrollPosition, setScrollPosition] = useState(0);
@@ -385,7 +386,8 @@
                     if (phase === 'reading' && unsavedEventsCount.current > 0) {
                         saveEventsToFirebase(events, false);
                     }
-                    if (phase === 'reading' || phase === 'quiz' || phase === 'review') {
+                    // Skip warning if we're intentionally redirecting
+                    if ((phase === 'reading' || phase === 'quiz' || phase === 'review') && !isRedirecting) {
                         e.preventDefault();
                         e.returnValue = '';
                         return '';
@@ -394,7 +396,7 @@
 
                 window.addEventListener('beforeunload', handleBeforeUnload);
                 return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-            }, [phase, events]);
+            }, [phase, events, isRedirecting]);
 
             // Auto-scroll chat to bottom
             useEffect(() => {
@@ -1359,8 +1361,8 @@ Use markdown formatting for better readability:
                     accuracy
                 });
 
-                // Set phase to 'complete' FIRST to prevent beforeunload warning
-                setPhase('complete');
+                // Set redirecting flag to prevent beforeunload warning (don't change phase to avoid flash)
+                setIsRedirecting(true);
 
                 try {
                     if (window.firebaseDb && participantId && sessionId) {
