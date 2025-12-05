@@ -116,6 +116,8 @@
             const [currentPaper, setCurrentPaper] = useState('');
             const [sessionId] = useState(`session_${Date.now()}`);
             const [showFinishPopup, setShowFinishPopup] = useState(false);
+            const [showAiUsagePopup, setShowAiUsagePopup] = useState(false); // AI usage check popup for without_llm
+            const [usedAiDuringReading, setUsedAiDuringReading] = useState(null); // null, 'yes', 'no'
             const [noAiAgreed, setNoAiAgreed] = useState(false); // For without_llm condition warning
 
             // Reading phase state
@@ -1576,7 +1578,7 @@ Use markdown formatting for better readability:
                                 {condition === 'without_llm' && (
                                     <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6">
                                         <h3 className="font-bold text-lg text-red-800 mb-3">
-                                            ⚠️ You have been assigned to a condition where AI use is prohibited.
+                                            ⚠️ You have been assigned to a condition where AI use is not allowed.
                                         </h3>
                                         <p className="text-red-700 mb-4">
                                             You must not use any AI-based tools (e.g., ChatGPT, Claude, and extensions) during this task.
@@ -1589,7 +1591,7 @@ Use markdown formatting for better readability:
                                                 className="w-5 h-5 mt-0.5 rounded border-red-300 text-red-600 focus:ring-red-500"
                                             />
                                             <span className="text-sm font-medium text-red-800">
-                                                I understand and agree not to use any AI tools during this task.
+                                                I understand and will not to use any AI tools during this task.
                                             </span>
                                         </label>
                                     </div>
@@ -1931,7 +1933,7 @@ Use markdown formatting for better readability:
                         {showFinishPopup && (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                                 <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">Do you wnat to finish reading session?</h3>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">Do you want to finish reading session?</h3>
                                     <p className="text-gray-600 mb-6">Continue to next step</p>
                                     <div className="flex space-x-4">
                                         <button
@@ -1943,13 +1945,70 @@ Use markdown formatting for better readability:
                                         <button
                                             onClick={() => {
                                                 setShowFinishPopup(false);
-                                                completeReading();
+                                                if (condition === 'without_llm') {
+                                                    setShowAiUsagePopup(true);
+                                                } else {
+                                                    completeReading();
+                                                }
                                             }}
                                             className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                                         >
                                             Confirm
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* AI Usage Check Popup (for without_llm condition) */}
+                        {showAiUsagePopup && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">Did you use any external AI tools while reading the paper?</h3>
+                                    <p className="text-gray-600 mb-6">Even if you did, it will not affect your compensation. Please answer honestly.</p>
+
+                                    <div className="space-y-3 mb-6">
+                                        <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="aiUsage"
+                                                value="yes"
+                                                checked={usedAiDuringReading === 'yes'}
+                                                onChange={() => setUsedAiDuringReading('yes')}
+                                                className="w-5 h-5"
+                                            />
+                                            <span className="text-gray-700">Yes, I used AI tools.</span>
+                                        </label>
+                                        <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="aiUsage"
+                                                value="no"
+                                                checked={usedAiDuringReading === 'no'}
+                                                onChange={() => setUsedAiDuringReading('no')}
+                                                className="w-5 h-5"
+                                            />
+                                            <span className="text-gray-700">No, I did not use AI tools.</span>
+                                        </label>
+                                    </div>
+
+                                    <button
+                                        onClick={() => {
+                                            if (usedAiDuringReading) {
+                                                logEvent('ai_usage_reported', { usedAi: usedAiDuringReading });
+                                                setShowAiUsagePopup(false);
+                                                completeReading();
+                                            }
+                                        }}
+                                        disabled={!usedAiDuringReading}
+                                        className={`w-full px-4 py-3 rounded-lg font-medium ${
+                                            usedAiDuringReading
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        }`}
+                                    >
+                                        Next →
+                                    </button>
                                 </div>
                             </div>
                         )}
