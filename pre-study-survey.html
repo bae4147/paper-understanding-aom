@@ -40,7 +40,6 @@
             const [condition, setCondition] = useState('without_llm');
             const [currentPaper, setCurrentPaper] = useState('');
             const [mode, setMode] = useState('experiment');
-            const [currentSection, setCurrentSection] = useState(1); // 1, 2, or 3
 
             // Get parameters from URL
             useEffect(() => {
@@ -56,56 +55,21 @@
                 setMode(urlMode);
             }, []);
 
-            // Section 1: Meeting Experience
+            // Meeting Experience
             const [meetingsPerWeek, setMeetingsPerWeek] = useState('');
             const [meetingsLed, setMeetingsLed] = useState('');
             const [meetingEffectiveness, setMeetingEffectiveness] = useState('');
             const [meetingTraining, setMeetingTraining] = useState('');
 
-            // Section 2: Demographics (moved to end)
-            const [age, setAge] = useState('');
-            const [workingSituation, setWorkingSituation] = useState('');
-            const [workHoursPerWeek, setWorkHoursPerWeek] = useState('');
-            const [yearsInOrganization, setYearsInOrganization] = useState('');
-            const [yearsInJob, setYearsInJob] = useState('');
-            const [jobTitle, setJobTitle] = useState('');
-            const [industry, setIndustry] = useState('');
-            const [ethnicity, setEthnicity] = useState('');
-            const [education, setEducation] = useState('');
-            const [englishProficiency, setEnglishProficiency] = useState('');
-
             const papers = typeof AVAILABLE_PAPERS !== 'undefined' ? AVAILABLE_PAPERS : [];
 
-
-            // Section validation functions
-            const validateSection1 = () => {
+            // Validation
+            const validateForm = () => {
                 if (!meetingsPerWeek || !meetingsLed || !meetingEffectiveness || !meetingTraining) {
-                    alert('Please complete all required fields in Section 1.');
+                    alert('Please complete all required fields.');
                     return false;
                 }
                 return true;
-            };
-
-            const validateSection2 = () => {
-                if (!age || !workingSituation || !workHoursPerWeek || !yearsInOrganization || !yearsInJob || !jobTitle || !industry || !ethnicity || !education || !englishProficiency) {
-                    alert('Please complete all required fields in Section 2.');
-                    return false;
-                }
-                return true;
-            };
-
-            const goToNextSection = () => {
-                if (currentSection === 1 && validateSection1()) {
-                    setCurrentSection(2);
-                    window.scrollTo(0, 0);
-                }
-            };
-
-            const goToPreviousSection = () => {
-                if (currentSection > 1) {
-                    setCurrentSection(currentSection - 1);
-                    window.scrollTo(0, 0);
-                }
             };
 
             const handleSubmit = async (e) => {
@@ -115,7 +79,7 @@
                     alert('Please enter your Prolific ID.');
                     return;
                 }
-                if (!validateSection2()) {
+                if (!validateForm()) {
                     return;
                 }
 
@@ -129,18 +93,6 @@
                         meetingsLed,
                         meetingEffectiveness: parseInt(meetingEffectiveness),
                         meetingTraining
-                    },
-                    demographics: {
-                        age: parseInt(age),
-                        workingSituation,
-                        workHoursPerWeek: parseInt(workHoursPerWeek),
-                        yearsInOrganization: parseFloat(yearsInOrganization),
-                        yearsInJob: parseFloat(yearsInJob),
-                        jobTitle,
-                        industry,
-                        ethnicity,
-                        education,
-                        englishProficiency
                     },
                     surveyCompletedAt: new Date().toISOString()
                 };
@@ -156,16 +108,8 @@
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
 
-                    console.log('Pre-study survey saved');
-
                     // Navigate to pre-task
-                    const params = new URLSearchParams({
-                        participantId,
-                        mode,
-                        condition,
-                        paper: currentPaper
-                    });
-                    window.location.href = `pre-task.html?${params.toString()}`;
+                    window.location.href = `pre-task.html?participantId=${participantId}&mode=${mode}&condition=${condition}&paper=${currentPaper}`;
 
                 } catch (error) {
                     console.error('Error saving survey:', error);
@@ -183,39 +127,8 @@
                                 <p className="text-gray-600">Please answer the following questions before we begin.</p>
                             </div>
 
-                            {/* Progress Indicator */}
-                            <div className="mb-8">
-                                <div className="flex items-center justify-center space-x-4">
-                                    {[1, 2].map((step) => (
-                                        <div key={step} className="flex items-center">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                                                currentSection === step
-                                                    ? 'bg-blue-600 text-white'
-                                                    : currentSection > step
-                                                        ? 'bg-green-500 text-white'
-                                                        : 'bg-gray-200 text-gray-500'
-                                            }`}>
-                                                {currentSection > step ? '✓' : step}
-                                            </div>
-                                            {step < 2 && (
-                                                <div className={`w-16 h-1 mx-2 ${
-                                                    currentSection > step ? 'bg-green-500' : 'bg-gray-200'
-                                                }`} />
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex justify-center mt-3">
-                                    <p className="text-sm text-gray-600">
-                                        {currentSection === 1 && 'Section 1: Meeting Experience'}
-                                        {currentSection === 2 && 'Section 2: Demographics'}
-                                    </p>
-                                </div>
-                            </div>
-
                             <form onSubmit={handleSubmit} className="space-y-8">
-                                {/* Experiment Setup - Only show in Section 1 */}
-                                {currentSection === 1 && (
+                                {/* Experiment Information */}
                                 <div className="border-b pb-6">
                                     <h2 className="text-xl font-bold text-gray-800 mb-4">Experiment Information</h2>
 
@@ -285,17 +198,15 @@
                                         )}
                                     </div>
                                 </div>
-                                )}
 
-                                {/* Section 1: Meeting Experience */}
-                                {currentSection === 1 && (
+                                {/* Meeting Experience */}
                                 <div className="border-b pb-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 1. Meeting Experience</h2>
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Meeting Experience</h2>
 
                                     <div className="space-y-6">
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                On average, how many meetings do you attend per week? *
+                                                1. On average, how many meetings do you attend per week? *
                                             </label>
                                             <div className="space-y-2">
                                                 {[
@@ -322,7 +233,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                How many meetings do you typically lead or facilitate per week? *
+                                                2. How many meetings do you typically lead or facilitate per week? *
                                             </label>
                                             <div className="space-y-2">
                                                 {[
@@ -349,7 +260,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                How would you rate the overall effectiveness of meetings at your workplace? *
+                                                3. How would you rate the overall effectiveness of meetings at your workplace? *
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Very ineffective</span>
@@ -375,7 +286,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Have you ever received formal training on running effective meetings? *
+                                                4. Have you ever received formal training on running effective meetings? *
                                             </label>
                                             <div className="space-y-2">
                                                 {[
@@ -397,246 +308,17 @@
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Section 1 Navigation */}
-                                    <div className="flex justify-end mt-6 pt-6 border-t">
-                                        <button
-                                            type="button"
-                                            onClick={goToNextSection}
-                                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                                        >
-                                            Next →
-                                        </button>
-                                    </div>
                                 </div>
-                                )}
 
-                                {/* Section 2: Demographics */}
-                                {currentSection === 2 && (
-                                <div className="border-b pb-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 2. Demographics</h2>
-
-                                    <div className="space-y-6">
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What is your age? *
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={age}
-                                                onChange={(e) => setAge(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="e.g., 35"
-                                                min="18"
-                                                max="100"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What is your working situation? *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: 'full-time', label: 'I work full-time in an organization.' },
-                                                    { value: 'part-time', label: 'I work part-time in an organization.' },
-                                                    { value: 'not-working', label: 'I do not work for any organization.' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="workingSituation"
-                                                            value={option.value}
-                                                            checked={workingSituation === option.value}
-                                                            onChange={(e) => setWorkingSituation(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                How many hours do you work per week on average? *
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={workHoursPerWeek}
-                                                onChange={(e) => setWorkHoursPerWeek(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="e.g., 40"
-                                                min="0"
-                                                max="168"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                How long have you been working in your current organization? (years) *
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={yearsInOrganization}
-                                                onChange={(e) => setYearsInOrganization(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="e.g., 3"
-                                                min="0"
-                                                step="0.5"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                How long have you been working in your current job? (years) *
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={yearsInJob}
-                                                onChange={(e) => setYearsInJob(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="e.g., 2"
-                                                min="0"
-                                                step="0.5"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What is your job title? *
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={jobTitle}
-                                                onChange={(e) => setJobTitle(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="e.g., Project Manager"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What is your industry? *
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={industry}
-                                                onChange={(e) => setIndustry(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="e.g., Technology, Healthcare, Finance"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What is your race/ethnicity? *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: 'american-indian', label: 'American Indian or Native American' },
-                                                    { value: 'asian', label: 'Asian or Asian-American' },
-                                                    { value: 'white', label: 'White (non-Hispanic)' },
-                                                    { value: 'black', label: 'Black or African-American' },
-                                                    { value: 'hispanic', label: 'Hispanic or Latino' },
-                                                    { value: 'pacific-islander', label: 'Native Hawaiian or Pacific Islander' },
-                                                    { value: 'middle-eastern', label: 'Middle Eastern, Southwest Asian, or North African' },
-                                                    { value: 'other', label: 'Other' },
-                                                    { value: 'prefer-not-to-answer', label: 'Prefer not to answer' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="ethnicity"
-                                                            value={option.value}
-                                                            checked={ethnicity === option.value}
-                                                            onChange={(e) => setEthnicity(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What is your highest level of education? *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: 'high-school', label: 'High school diploma or equivalent' },
-                                                    { value: 'associate', label: "Associate's degree" },
-                                                    { value: 'bachelor', label: "Bachelor's degree" },
-                                                    { value: 'master', label: "Master's degree" },
-                                                    { value: 'doctorate', label: 'Doctorate degree' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="education"
-                                                            value={option.value}
-                                                            checked={education === option.value}
-                                                            onChange={(e) => setEducation(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What is your English proficiency level? *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: 'not-fluent', label: 'Not fluent' },
-                                                    { value: 'quite-fluent', label: 'Quite fluent' },
-                                                    { value: 'very-fluent', label: 'Very fluent' },
-                                                    { value: 'native', label: 'Native' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="englishProficiency"
-                                                            value={option.value}
-                                                            checked={englishProficiency === option.value}
-                                                            onChange={(e) => setEnglishProficiency(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Section 2 Navigation */}
-                                    <div className="flex justify-between mt-6 pt-6 border-t">
-                                        <button
-                                            type="button"
-                                            onClick={goToPreviousSection}
-                                            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
-                                        >
-                                            ← Back
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                                        >
-                                            Continue →
-                                        </button>
-                                    </div>
+                                {/* Submit */}
+                                <div className="pt-4">
+                                    <button
+                                        type="submit"
+                                        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                                    >
+                                        Continue →
+                                    </button>
                                 </div>
-                                )}
                             </form>
                         </div>
                     </div>
