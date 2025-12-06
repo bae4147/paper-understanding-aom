@@ -165,150 +165,155 @@
             }
 
             return (
-                <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 py-8 px-4">
+                <div className="min-h-screen bg-gradient-to-br from-amber-50/50 to-orange-50 py-8 px-4">
                     <div className="max-w-3xl mx-auto">
                         <div className="bg-white rounded-xl shadow-2xl p-8">
                             {/* Header */}
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">💭</div>
                                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Pre-Reading Task</h1>
-                                <p className="text-gray-600">Before reading the article, please reflect on your meeting experiences.</p>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-8">
-                                {/* Context */}
-                                <div className="bg-gray-100 p-5 rounded-xl">
-                                    <h2 className="text-lg font-bold text-gray-800 mb-2">Please recall a recent meeting you led at work.</h2>
-                                    <p className="text-gray-600 text-sm">Think about a specific meeting where you were responsible for organizing or facilitating.</p>
+                            <form onSubmit={handleSubmit} className="space-y-16">
+                                {/* Context - Main Instruction */}
+                                <div className="bg-amber-100 p-6 rounded-xl">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-2">Please recall a recent meeting you led at work.</h2>
+                                    <p className="text-gray-600">Think about a specific meeting where you were responsible for organizing or facilitating.</p>
                                 </div>
 
-                                {/* Q1: Strategies BEFORE */}
-                                <div className="border-l-4 border-blue-400 pl-4">
-                                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                                        Q1. Please list the specific strategies you used to make this meeting more effective <span className="text-blue-600">before</span> the meeting. *
+                                {/* Q1: Meeting Strategies */}
+                                <div>
+                                    <label className="block text-base font-bold text-gray-800 mb-6">
+                                        Q1. Please list the specific strategies you used to make this meeting more effective. *
                                     </label>
-                                    <textarea
-                                        value={strategiesBefore}
-                                        onChange={(e) => setStrategiesBefore(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        rows="4"
-                                        placeholder="e.g., I sent an agenda beforehand, I prepared presentation materials, I invited the right stakeholders..."
-                                        required
-                                    />
 
-                                    <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Q1-1. How confident are you that these strategies improved the meeting's effectiveness? *
+                                    <div className="space-y-6">
+                                    {/* Q1-a: Before the meeting */}
+                                    <div className="space-y-3">
+                                        <label className="block text-sm font-bold text-gray-700">
+                                            Q1.1 Before the meeting
                                         </label>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-500 w-24">Not at all confident</span>
-                                            <div className="flex space-x-1">
-                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                    <button
-                                                        key={value}
-                                                        type="button"
-                                                        onClick={() => setConfidenceBefore(value.toString())}
-                                                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
-                                                            confidenceBefore === value.toString()
-                                                                ? 'bg-blue-500 text-white'
-                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                        }`}
-                                                    >
-                                                        {value}
-                                                    </button>
-                                                ))}
+                                        <textarea
+                                            value={strategiesBefore}
+                                            onChange={(e) => setStrategiesBefore(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                            rows="3"
+                                            placeholder=""
+                                            required
+                                        />
+                                        <div className="mt-3">
+                                            <label className="block text-xs font-bold text-gray-600 mb-2">
+                                                How confident are you that these strategies improved the meeting's effectiveness? *
+                                            </label>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setConfidenceBefore(value.toString())}
+                                                            className={`w-9 h-9 rounded-full text-sm font-bold transition-colors ${
+                                                                confidenceBefore === value.toString()
+                                                                    ? 'bg-amber-500 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
                                             </div>
-                                            <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
                                         </div>
+                                    </div>
+
+                                    {/* Q1-b: During the meeting */}
+                                    <div className="space-y-3">
+                                        <label className="block text-sm font-bold text-gray-700">
+                                            Q1.2 During the meeting
+                                        </label>
+                                        <textarea
+                                            value={strategiesDuring}
+                                            onChange={(e) => setStrategiesDuring(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                            rows="3"
+                                            placeholder=""
+                                            required
+                                        />
+                                        <div className="mt-3">
+                                            <label className="block text-xs font-bold text-gray-600 mb-2">
+                                                How confident are you that these strategies improved the meeting's effectiveness? *
+                                            </label>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setConfidenceDuring(value.toString())}
+                                                            className={`w-9 h-9 rounded-full text-sm font-bold transition-colors ${
+                                                                confidenceDuring === value.toString()
+                                                                    ? 'bg-amber-500 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Q1-c: After the meeting */}
+                                    <div className="space-y-3">
+                                        <label className="block text-sm font-bold text-gray-700">
+                                            Q1.3 After the meeting
+                                        </label>
+                                        <textarea
+                                            value={strategiesAfter}
+                                            onChange={(e) => setStrategiesAfter(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                            rows="3"
+                                            placeholder=""
+                                            required
+                                        />
+                                        <div className="mt-3">
+                                            <label className="block text-xs font-bold text-gray-600 mb-2">
+                                                How confident are you that these strategies improved the meeting's effectiveness? *
+                                            </label>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setConfidenceAfter(value.toString())}
+                                                            className={`w-9 h-9 rounded-full text-sm font-bold transition-colors ${
+                                                                confidenceAfter === value.toString()
+                                                                    ? 'bg-amber-500 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                     </div>
                                 </div>
 
-                                {/* Q2: Strategies DURING */}
-                                <div className="border-l-4 border-green-400 pl-4">
-                                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                                        Q2. Please list the specific strategies you used to make this meeting more effective <span className="text-green-600">during</span> the meeting. *
-                                    </label>
-                                    <textarea
-                                        value={strategiesDuring}
-                                        onChange={(e) => setStrategiesDuring(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                        rows="4"
-                                        placeholder="e.g., I started with clear objectives, I kept discussions on track, I encouraged participation from everyone..."
-                                        required
-                                    />
-
-                                    <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Q2-1. How confident are you that these strategies improved the meeting's effectiveness? *
-                                        </label>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-500 w-24">Not at all confident</span>
-                                            <div className="flex space-x-1">
-                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                    <button
-                                                        key={value}
-                                                        type="button"
-                                                        onClick={() => setConfidenceDuring(value.toString())}
-                                                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
-                                                            confidenceDuring === value.toString()
-                                                                ? 'bg-green-500 text-white'
-                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                        }`}
-                                                    >
-                                                        {value}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Q3: Strategies AFTER */}
-                                <div className="border-l-4 border-purple-400 pl-4">
-                                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                                        Q3. Please list the specific strategies you used to make this meeting more effective <span className="text-purple-600">after</span> the meeting. *
-                                    </label>
-                                    <textarea
-                                        value={strategiesAfter}
-                                        onChange={(e) => setStrategiesAfter(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                        rows="4"
-                                        placeholder="e.g., I sent meeting minutes, I followed up on action items, I gathered feedback from participants..."
-                                        required
-                                    />
-
-                                    <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Q3-1. How confident are you that these strategies improved the meeting's effectiveness? *
-                                        </label>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-500 w-24">Not at all confident</span>
-                                            <div className="flex space-x-1">
-                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                    <button
-                                                        key={value}
-                                                        type="button"
-                                                        onClick={() => setConfidenceAfter(value.toString())}
-                                                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
-                                                            confidenceAfter === value.toString()
-                                                                ? 'bg-purple-500 text-white'
-                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                        }`}
-                                                    >
-                                                        {value}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Q4: Approach Clarity */}
+                                {/* Q2: Approach Clarity */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-800 mb-2">
-                                        Q4. To what extent did you have a clear, intentional approach to running this meeting effectively? *
+                                        Q2. To what extent did you have a clear, intentional approach to running this meeting effectively? *
                                     </label>
                                     <div className="flex items-center justify-between mt-3">
                                         <span className="text-xs text-gray-500 w-24">No clear approach</span>
@@ -332,10 +337,10 @@
                                     </div>
                                 </div>
 
-                                {/* Q5: Challenges */}
+                                {/* Q3: Challenges */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-800 mb-2">
-                                        Q5. Please briefly describe any challenges or difficulties you experienced during this meeting. *
+                                        Q3. Please briefly describe any challenges or difficulties you experienced during this meeting. *
                                     </label>
                                     <p className="text-xs text-gray-500 mb-3">
                                         Minimum 10 words required. Current: <span className={countWords(challenges) >= 10 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{countWords(challenges)}</span> words
@@ -345,7 +350,7 @@
                                         onChange={(e) => setChallenges(e.target.value)}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                                         rows="4"
-                                        placeholder="e.g., Some participants were distracted and not engaged. The discussion went off-topic several times. It was difficult to reach consensus on the main decision..."
+                                        placeholder=""
                                         required
                                     />
                                 </div>
