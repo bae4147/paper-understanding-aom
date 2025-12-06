@@ -113,7 +113,7 @@
             const [phase, setPhase] = useState('setup'); // setup, reading-guide, reading, quiz-guide, quiz, review-guide, review, complete
             const [participantId, setParticipantId] = useState('');
             const [condition, setCondition] = useState('without_llm'); // without_llm, with_llm, with_llm_extended
-            const [currentPaper, setCurrentPaper] = useState('');
+            const [currentPaper, setCurrentPaper] = useState('mroz2018'); // Default paper
             const [sessionId] = useState(`session_${Date.now()}`);
             const [showFinishPopup, setShowFinishPopup] = useState(false);
             const [showAiUsagePopup, setShowAiUsagePopup] = useState(false); // AI usage check popup for without_llm
@@ -1501,27 +1501,9 @@ Use markdown formatting for better readability:
                                     </select>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Select Paper *
-                                    </label>
-                                    <select
-                                        value={currentPaper}
-                                        onChange={(e) => setCurrentPaper(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    >
-                                        <option value="">Choose a paper...</option>
-                                        {papers.map(paper => (
-                                            <option key={paper.id} value={paper.id}>
-                                                {paper.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
                                 <button
                                     onClick={startExperiment}
-                                    disabled={!participantId || !currentPaper}
+                                    disabled={!participantId}
                                     className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors text-lg mt-6"
                                 >
                                     Start Experiment
