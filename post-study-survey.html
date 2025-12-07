@@ -75,6 +75,9 @@
             // Study feedback (optional)
             const [studyFeedback, setStudyFeedback] = useState('');
 
+            // Loading state
+            const [isSubmitting, setIsSubmitting] = useState(false);
+
             // AI Usage section
             const [llmFrequency, setLlmFrequency] = useState('');
             const [aiToolsUsed, setAiToolsUsed] = useState('');
@@ -101,6 +104,7 @@
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
+                if (isSubmitting) return;
 
                 // Validation for required fields
                 if (!mentalDemand || !physicalDemand || !temporalDemand || !performance || !effort || !frustration ||
@@ -121,6 +125,8 @@
                         return;
                     }
                 }
+
+                setIsSubmitting(true);
 
                 const surveyData = {
                     nasaTLX: {
@@ -195,6 +201,7 @@
                 } catch (error) {
                     console.error('Error saving post-study survey:', error);
                     alert('Failed to save survey. Please try again.');
+                    setIsSubmitting(false);
                 }
             };
 
@@ -228,7 +235,7 @@
                                     <div className="space-y-8">
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Mental Demand: How mentally demanding was the task?
+                                                Mental Demand: How mentally demanding was the task?*
                                             </label>
                                             <p className="text-xs text-gray-600 mb-3">(e.g., thinking, deciding, understanding, remembering)</p>
                                             <div className="flex items-center justify-between">
@@ -255,7 +262,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Physical Demand: How physically demanding was the task?
+                                                Physical Demand: How physically demanding was the task?*
                                             </label>
                                             <p className="text-xs text-gray-600 mb-3">(e.g., clicking, scrolling, typing)</p>
                                             <div className="flex items-center justify-between">
@@ -282,7 +289,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Temporal Demand: How hurried or rushed was the pace of the task?
+                                                Temporal Demand: How hurried or rushed was the pace of the task?*
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Very Low</span>
@@ -308,7 +315,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Performance: How successful were you in understanding the article?
+                                                Performance: How successful were you in understanding the article?*
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Excellent</span>
@@ -334,7 +341,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Effort: How hard did you have to work to read and understand the article?
+                                                Effort: How hard did you have to work to read and understand the article?*
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Very Low</span>
@@ -360,7 +367,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Frustration: How insecure, discouraged, irritated, stressed, or annoyed were you during the task?
+                                                Frustration: How insecure, discouraged, irritated, stressed, or annoyed were you during the task?*
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Very Low</span>
@@ -398,7 +405,7 @@
                                         <div className="space-y-8">
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How well do you feel you understood the article overall?
+                                                    How well do you feel you understood the article overall?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Did not understand</span>
@@ -424,7 +431,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How well do you feel you understood the key concepts?
+                                                    How well do you feel you understood the key concepts?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Did not understand</span>
@@ -450,7 +457,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How well do you feel you understood the research findings?
+                                                    How well do you feel you understood the research findings?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Did not understand</span>
@@ -476,7 +483,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How confident are you that you can apply the article's recommendations in practice?
+                                                    How confident are you that you can apply the article's recommendations in practice?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all confident</span>
@@ -505,11 +512,11 @@
                                     {/* Quiz Confidence */}
                                     <div>
                                         <h3 className="text-lg font-semibold text-gray-700 mb-3">2. Quiz Confidence</h3>
-                                        <p className="text-sm text-gray-600 mb-4">Please rate your confidence in the quiz you just completed.</p>
+                                        <p className="text-sm text-gray-600 mb-4">Please rate your confidence in the quiz you just completed.*</p>
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Overall, how confident are you that your quiz answers were correct?
+                                                Overall, how confident are you that your quiz answers were correct?*
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Not at all confident</span>
@@ -1145,9 +1152,20 @@
                                 <div className="pt-6">
                                     <button
                                         type="submit"
-                                        className="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 font-medium transition-colors text-lg"
+                                        disabled={isSubmitting}
+                                        className="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 font-medium transition-colors text-lg disabled:bg-green-400 disabled:cursor-not-allowed flex items-center justify-center"
                                     >
-                                        Submit Survey & Complete Study
+                                        {isSubmitting ? (
+                                            <>
+                                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Submitting...
+                                            </>
+                                        ) : (
+                                            'Submit Survey & Complete Study'
+                                        )}
                                     </button>
                                 </div>
                             </form>
