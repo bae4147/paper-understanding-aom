@@ -178,7 +178,7 @@
 
             // Random tab order (shuffle content tabs, chat always at end)
             const [tabOrder] = useState(() => {
-                const shuffleTabs = ['video', 'audio', 'infographics', 'simplified', 'quiz'];
+                const shuffleTabs = ['video', 'audio', 'infographics', 'quiz'];
                 // Fisher-Yates shuffle
                 for (let i = shuffleTabs.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -280,72 +280,30 @@
             const [quizQuestions, setQuizQuestions] = useState([
                 {
                     id: 1,
-                    question: "According to Mroz et al. (2018), what percentage of meetings are estimated to be rated as 'poor' by attendees, contributing to significant financial waste for organizations?",
-                    options: ["As many as 50%", "Approximately 75%", "As many as 25%", "Less than 10%"],
-                    correctAnswer: "As many as 50%",
-                    type: "multiple_choice"
-                },
-                {
-                    id: 2,
                     question: "The 'science of meetings' is defined as the systematic study of what occurs during which phase(s) of the meeting process?",
                     options: ["Before, during, and after meetings, as well as their broader organizational context.", "Only the events that happen during the meeting itself.", "Primarily the design and preparation that happens before the meeting.", "Only the outcomes and follow-up actions after the meeting."],
                     correctAnswer: "Before, during, and after meetings, as well as their broader organizational context.",
                     type: "multiple_choice"
                 },
                 {
-                    id: 3,
+                    id: 2,
                     question: "Which of the following is identified as a best practice for the 'Before the meeting' phase?",
                     options: ["Circulating a written agenda in advance to all attendees.", "Intervening when communication patterns become dysfunctional.", "Sending out meeting minutes and action items.", "Actively encouraging everyone to participate."],
                     correctAnswer: "Circulating a written agenda in advance to all attendees.",
                     type: "multiple_choice"
                 },
                 {
-                    id: 4,
-                    question: "The research of Kauffeld & Lehmann-Willenbrock (2012) found that which of the following interpersonal interactions is contagious and can reduce group outcomes?",
-                    options: ["Seeking feedback from other attendees", "Proposing solutions to problems", "Humor and laughter patterns", "Complaining using 'killer phrases'"],
-                    correctAnswer: "Complaining using 'killer phrases'",
-                    type: "multiple_choice"
-                },
-                {
-                    id: 5,
+                    id: 3,
                     question: "According to the article, satisfaction with meetings is a significant predictor of what broader employee attitude?",
                     options: ["Overall job satisfaction", "Trust in senior leadership", "Perceptions of organizational strategy", "Satisfaction with pay and promotion opportunities"],
                     correctAnswer: "Overall job satisfaction",
                     type: "multiple_choice"
                 },
                 {
-                    id: 6,
-                    question: "What is one of the primary reasons the article suggests avoiding meetings?",
-                    options: ["When the purpose is to debrief a team after a performance episode.", "When the topic requires input from functionally diverse groups.", "When sharing routine, nonurgent information that doesn't require discussion.", "When leaders need to create and discuss strategic directions."],
-                    correctAnswer: "When sharing routine, nonurgent information that doesn't require discussion.",
-                    type: "multiple_choice"
-                },
-                {
-                    id: 7,
-                    question: "What behavior, according to Sonnentag (2001), tends to differentiate high-performing employees from low-performing employees during meetings?",
-                    options: ["High performers tend to arrive late more often.", "High performers contribute more by setting goals and seeking feedback.", "High performers avoid multitasking and distractions.", "High performers complain more about inefficient work processes."],
-                    correctAnswer: "High performers contribute more by setting goals and seeking feedback.",
-                    type: "multiple_choice"
-                },
-                {
-                    id: 8,
+                    id: 4,
                     question: "What is a critical action item for a meeting organizer to complete *after* a meeting has ended to ensure its effectiveness?",
                     options: ["Following an agenda to keep the meeting on track.", "Starting the meeting on time.", "Ensuring only people with relevant expertise are invited.", "Sending meeting minutes with an action plan to all relevant parties."],
                     correctAnswer: "Sending meeting minutes with an action plan to all relevant parties.",
-                    type: "multiple_choice"
-                },
-                {
-                    id: 9,
-                    question: "According to Allen and Rogelberg (2013), leaders can foster employee engagement through meetings by ensuring the meetings are...",
-                    options: ["virtual, technology-focused, and recorded for later viewing.", "long, detailed, and led with strict authority.", "optional, infrequent, and focused on individual updates.", "relevant, short, and participatory."],
-                    correctAnswer: "relevant, short, and participatory.",
-                    type: "multiple_choice"
-                },
-                {
-                    id: 10,
-                    question: "The article suggests a future direction for meeting science is to move away from surveys and toward what kind of research method?",
-                    options: ["Examining video- and audio-recorded behaviors in meetings.", "Historical analysis of meeting minutes from successful companies.", "Conducting more large-scale employee satisfaction surveys.", "Developing more complex theoretical models without empirical testing."],
-                    correctAnswer: "Examining video- and audio-recorded behaviors in meetings.",
                     type: "multiple_choice"
                 },
             ]);
