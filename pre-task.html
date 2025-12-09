@@ -40,17 +40,9 @@
             const paper = urlParams.get('paper') || 'mroz2018';
             const mode = urlParams.get('mode') || 'experiment';
 
-            // Pre-task responses - Before meeting
-            const [strategiesBefore, setStrategiesBefore] = useState('');
-            const [confidenceBefore, setConfidenceBefore] = useState('');
-
-            // Pre-task responses - During meeting
-            const [strategiesDuring, setStrategiesDuring] = useState('');
-            const [confidenceDuring, setConfidenceDuring] = useState('');
-
-            // Pre-task responses - After meeting
-            const [strategiesAfter, setStrategiesAfter] = useState('');
-            const [confidenceAfter, setConfidenceAfter] = useState('');
+            // Pre-task responses - Strategies
+            const [strategies, setStrategies] = useState('');
+            const [confidence, setConfidence] = useState('');
 
             // Overall approach clarity
             const [approachClarity, setApproachClarity] = useState('');
@@ -77,33 +69,13 @@
                 e.preventDefault();
                 if (isSubmitting) return;
 
-                // Validate Before section
-                if (!strategiesBefore.trim()) {
-                    alert('Please describe the strategies you used BEFORE the meeting.');
+                // Validate strategies
+                if (!strategies.trim()) {
+                    alert('Please describe the strategies you used.');
                     return;
                 }
-                if (!confidenceBefore) {
-                    alert('Please rate your confidence for BEFORE strategies.');
-                    return;
-                }
-
-                // Validate During section
-                if (!strategiesDuring.trim()) {
-                    alert('Please describe the strategies you used DURING the meeting.');
-                    return;
-                }
-                if (!confidenceDuring) {
-                    alert('Please rate your confidence for DURING strategies.');
-                    return;
-                }
-
-                // Validate After section
-                if (!strategiesAfter.trim()) {
-                    alert('Please describe the strategies you used AFTER the meeting.');
-                    return;
-                }
-                if (!confidenceAfter) {
-                    alert('Please rate your confidence for AFTER strategies.');
+                if (!confidence) {
+                    alert('Please rate your confidence.');
                     return;
                 }
 
@@ -122,18 +94,8 @@
                 setIsSubmitting(true);
 
                 const preTaskData = {
-                    before: {
-                        strategies: strategiesBefore.trim(),
-                        confidence: parseInt(confidenceBefore)
-                    },
-                    during: {
-                        strategies: strategiesDuring.trim(),
-                        confidence: parseInt(confidenceDuring)
-                    },
-                    after: {
-                        strategies: strategiesAfter.trim(),
-                        confidence: parseInt(confidenceAfter)
-                    },
+                    strategies: strategies.trim(),
+                    confidence: parseInt(confidence),
                     approachClarity: parseInt(approachClarity),
                     challenges: challenges.trim(),
                     completedAt: new Date().toISOString()
@@ -190,130 +152,41 @@
 
                                 {/* Q1: Meeting Strategies */}
                                 <div>
-                                    <label className="block text-base font-bold text-gray-800 mb-6">
+                                    <label className="block text-base font-bold text-gray-800 mb-3">
                                         Q1. Please list the specific strategies you used to make this meeting more effective. *
                                     </label>
-
-                                    <div className="space-y-6">
-                                    {/* Q1-a: Before the meeting */}
-                                    <div className="space-y-3">
-                                        <label className="block text-sm font-bold text-gray-700">
-                                            Q1.1 Before the meeting
+                                    <textarea
+                                        value={strategies}
+                                        onChange={(e) => setStrategies(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                        rows="6"
+                                        placeholder=""
+                                        required
+                                    />
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-bold text-gray-600 mb-2">
+                                            How confident are you that these strategies improved the meeting's effectiveness? *
                                         </label>
-                                        <textarea
-                                            value={strategiesBefore}
-                                            onChange={(e) => setStrategiesBefore(e.target.value)}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                                            rows="3"
-                                            placeholder=""
-                                            required
-                                        />
-                                        <div className="mt-3">
-                                            <label className="block text-xs font-bold text-gray-600 mb-2">
-                                                How confident are you that these strategies improved the meeting's effectiveness? *
-                                            </label>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs text-gray-500 w-24">Not at all confident</span>
-                                                <div className="flex space-x-1">
-                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                        <button
-                                                            key={value}
-                                                            type="button"
-                                                            onClick={() => setConfidenceBefore(value.toString())}
-                                                            className={`w-9 h-9 rounded-full text-sm font-bold transition-colors ${
-                                                                confidenceBefore === value.toString()
-                                                                    ? 'bg-amber-500 text-white'
-                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        >
-                                                            {value}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500 w-24">Not at all confident</span>
+                                            <div className="flex space-x-1">
+                                                {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() => setConfidence(value.toString())}
+                                                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                            confidence === value.toString()
+                                                                ? 'bg-amber-500 text-white'
+                                                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        {value}
+                                                    </button>
+                                                ))}
                                             </div>
+                                            <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
                                         </div>
-                                    </div>
-
-                                    {/* Q1-b: During the meeting */}
-                                    <div className="space-y-3">
-                                        <label className="block text-sm font-bold text-gray-700">
-                                            Q1.2 During the meeting
-                                        </label>
-                                        <textarea
-                                            value={strategiesDuring}
-                                            onChange={(e) => setStrategiesDuring(e.target.value)}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                                            rows="3"
-                                            placeholder=""
-                                            required
-                                        />
-                                        <div className="mt-3">
-                                            <label className="block text-xs font-bold text-gray-600 mb-2">
-                                                How confident are you that these strategies improved the meeting's effectiveness? *
-                                            </label>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs text-gray-500 w-24">Not at all confident</span>
-                                                <div className="flex space-x-1">
-                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                        <button
-                                                            key={value}
-                                                            type="button"
-                                                            onClick={() => setConfidenceDuring(value.toString())}
-                                                            className={`w-9 h-9 rounded-full text-sm font-bold transition-colors ${
-                                                                confidenceDuring === value.toString()
-                                                                    ? 'bg-amber-500 text-white'
-                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        >
-                                                            {value}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Q1-c: After the meeting */}
-                                    <div className="space-y-3">
-                                        <label className="block text-sm font-bold text-gray-700">
-                                            Q1.3 After the meeting
-                                        </label>
-                                        <textarea
-                                            value={strategiesAfter}
-                                            onChange={(e) => setStrategiesAfter(e.target.value)}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                                            rows="3"
-                                            placeholder=""
-                                            required
-                                        />
-                                        <div className="mt-3">
-                                            <label className="block text-xs font-bold text-gray-600 mb-2">
-                                                How confident are you that these strategies improved the meeting's effectiveness? *
-                                            </label>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs text-gray-500 w-24">Not at all confident</span>
-                                                <div className="flex space-x-1">
-                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                        <button
-                                                            key={value}
-                                                            type="button"
-                                                            onClick={() => setConfidenceAfter(value.toString())}
-                                                            className={`w-9 h-9 rounded-full text-sm font-bold transition-colors ${
-                                                                confidenceAfter === value.toString()
-                                                                    ? 'bg-amber-500 text-white'
-                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        >
-                                                            {value}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <span className="text-xs text-gray-500 w-24 text-right">Extremely confident</span>
-                                            </div>
-                                        </div>
-                                    </div>
                                     </div>
                                 </div>
 
