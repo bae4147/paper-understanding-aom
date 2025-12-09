@@ -56,9 +56,9 @@
             }, []);
 
             // Meeting Experience
-            const [meetingsPerWeek, setMeetingsPerWeek] = useState('');
-            const [meetingsLed, setMeetingsLed] = useState('');
-            const [meetingEffectiveness, setMeetingEffectiveness] = useState('');
+            const [meetingStrategies, setMeetingStrategies] = useState('');
+            const [strategyConfidence, setStrategyConfidence] = useState('');
+            const [intentionalApproach, setIntentionalApproach] = useState('');
 
             // AI Usage
             const [aiPurposes, setAiPurposes] = useState([]);
@@ -109,7 +109,7 @@
 
             // Validation
             const validateForm = () => {
-                if (!meetingsPerWeek || !meetingsLed || !meetingEffectiveness) {
+                if (!meetingStrategies || !strategyConfidence || !intentionalApproach) {
                     alert('Please complete all required fields.');
                     return false;
                 }
@@ -135,9 +135,9 @@
                     paper: currentPaper,
                     mode,
                     meetingExperience: {
-                        meetingsPerWeek,
-                        meetingsLed,
-                        meetingEffectiveness: parseInt(meetingEffectiveness)
+                        meetingStrategies,
+                        strategyConfidence: parseInt(strategyConfidence),
+                        intentionalApproach: parseInt(intentionalApproach)
                     },
                     aiUsage: {
                         purposes: aiPurposes.map(purpose => ({
@@ -257,81 +257,39 @@
                                 <div className="border-b pb-6">
                                     <h2 className="text-xl font-bold text-gray-800 mb-4">Meeting Experience</h2>
                                     <p className="text-sm text-gray-600 mb-6">
-                                        The following questions ask about your meeting experiences <span className="font-bold">before</span>, <span className="font-bold">during</span>, and <span className="font-bold">after</span> meetings.
+                                        Please recall a recent meeting you led at work.
                                     </p>
 
                                     <div className="space-y-6">
-                                        {/* Before */}
+                                        {/* Q1 - Strategies */}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                1. On average, how many meetings do you attend per week? *
+                                                Q1. Please list the specific strategies you used to make this meeting more effective. *
                                             </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: '0-2', label: '0-2 meetings' },
-                                                    { value: '3-5', label: '3-5 meetings' },
-                                                    { value: '6-10', label: '6-10 meetings' },
-                                                    { value: '11-15', label: '11-15 meetings' },
-                                                    { value: '16+', label: '16 or more meetings' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="meetingsPerWeek"
-                                                            value={option.value}
-                                                            checked={meetingsPerWeek === option.value}
-                                                            onChange={(e) => setMeetingsPerWeek(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
+                                            <textarea
+                                                value={meetingStrategies}
+                                                onChange={(e) => setMeetingStrategies(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 min-h-[120px]"
+                                                placeholder="Describe the strategies you used..."
+                                                required
+                                            />
                                         </div>
 
-                                        {/* During */}
+                                        {/* Q2 - Confidence */}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                2. How many meetings do you typically lead or facilitate per week? *
-                                            </label>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { value: '0', label: 'None' },
-                                                    { value: '1-2', label: '1-2 meetings' },
-                                                    { value: '3-5', label: '3-5 meetings' },
-                                                    { value: '6-10', label: '6-10 meetings' },
-                                                    { value: '11+', label: '11 or more meetings' }
-                                                ].map(option => (
-                                                    <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="meetingsLed"
-                                                            value={option.value}
-                                                            checked={meetingsLed === option.value}
-                                                            onChange={(e) => setMeetingsLed(e.target.value)}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <span className="text-sm text-gray-700">{option.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* After */}
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                3. How would you rate the overall effectiveness of meetings at your workplace? *
+                                                Q2. How confident are you that your strategies above improved this meeting's effectiveness? *
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
-                                                <span className="text-xs text-gray-500">Very ineffective</span>
+                                                <span className="text-xs text-gray-500">Not at all confident</span>
                                                 <div className="flex space-x-1">
                                                     {[1, 2, 3, 4, 5, 6, 7].map(value => (
                                                         <button
                                                             key={value}
                                                             type="button"
-                                                            onClick={() => setMeetingEffectiveness(value.toString())}
+                                                            onClick={() => setStrategyConfidence(value.toString())}
                                                             className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
-                                                                meetingEffectiveness === value.toString()
+                                                                strategyConfidence === value.toString()
                                                                     ? 'bg-blue-600 text-white'
                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                             }`}
@@ -340,7 +298,34 @@
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <span className="text-xs text-gray-500">Very effective</span>
+                                                <span className="text-xs text-gray-500">Extremely confident</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Q3 - Intentional Approach */}
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                Q3. To what extent did you have a clear, intentional approach to running this meeting effectively? *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">No clear approach</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setIntentionalApproach(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                intentionalApproach === value.toString()
+                                                                    ? 'bg-blue-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Very clear and intentional approach</span>
                                             </div>
                                         </div>
                                     </div>
