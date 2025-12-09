@@ -168,6 +168,12 @@
                     }
                 }
 
+                // Validate AI purposes if not 'never'
+                if (llmFrequency !== 'never' && aiPurposes.length === 0) {
+                    alert('Please select at least one purpose for which you use AI tools at work.');
+                    return;
+                }
+
                 setIsSubmitting(true);
 
                 const surveyData = {
@@ -928,24 +934,11 @@
                                             </div>
                                         </div>
 
+                                        {/* AI Purposes - shown only if not 'never' */}
+                                        {llmFrequency && llmFrequency !== 'never' && (
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What AI tools (e.g., ChatGPT, Claude, Gemini) do you use at work? (Optional)
-                                            </label>
-                                            <p className="text-xs text-gray-600 mb-2">AI refers to Artificial Intelligence</p>
-                                            <textarea
-                                                value={aiToolsUsed}
-                                                onChange={(e) => setAiToolsUsed(e.target.value)}
-                                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                rows="3"
-                                                placeholder="e.g., ChatGPT, Claude, Copilot, Gemini..."
-                                            />
-                                        </div>
-
-                                        {/* AI Purposes */}
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                For what purposes do you use AI tools at work? (Optional)
+                                                For what purposes do you use AI tools at work? *
                                             </label>
                                             <p className="text-xs text-gray-600 mb-4">
                                                 Select all that apply. For each selected purpose, rate how useful and trustworthy you find AI.
@@ -1100,6 +1093,21 @@
                                                     )}
                                                 </div>
                                             </div>
+                                        </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                What AI tools (e.g., ChatGPT, Claude, Gemini) do you use at work? (Optional)
+                                            </label>
+                                            <p className="text-xs text-gray-600 mb-2">AI refers to Artificial Intelligence</p>
+                                            <textarea
+                                                value={aiToolsUsed}
+                                                onChange={(e) => setAiToolsUsed(e.target.value)}
+                                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                rows="3"
+                                                placeholder="e.g., ChatGPT, Claude, Copilot, Gemini..."
+                                            />
                                         </div>
                                     </div>
                                 </div>
