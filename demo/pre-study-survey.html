@@ -89,21 +89,14 @@
                 e.preventDefault();
                 if (!validateForm()) return;
 
-                // Demo mode - just navigate without saving
-                window.location.href = `pre-task.html?condition=${condition}&paper=${currentPaper}`;
+                // Demo mode - skip pre-task and go directly to reading
+                window.location.href = `reading.html?condition=${condition}&paper=${currentPaper}`;
             };
 
             return (
-                <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-8 px-4">
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
                     <div className="max-w-3xl mx-auto">
                         <div className="bg-white rounded-xl shadow-2xl p-8">
-                            {/* Demo Badge */}
-                            <div className="flex justify-center mb-4">
-                                <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
-                                    DEMO MODE - No data will be saved
-                                </span>
-                            </div>
-
                             {/* Header */}
                             <div className="text-center mb-8">
                                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Pre-Study Survey</h1>
@@ -127,7 +120,7 @@
                                             <textarea
                                                 value={meetingStrategies}
                                                 onChange={(e) => setMeetingStrategies(e.target.value)}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 min-h-[120px]"
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 min-h-[120px]"
                                                 placeholder="Describe the strategies you used..."
                                                 required
                                             />
@@ -148,7 +141,7 @@
                                                             onClick={() => setStrategyConfidence(value.toString())}
                                                             className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                                 strategyConfidence === value.toString()
-                                                                    ? 'bg-green-600 text-white'
+                                                                    ? 'bg-blue-600 text-white'
                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                             }`}
                                                         >
@@ -175,7 +168,7 @@
                                                             onClick={() => setIntentionalApproach(value.toString())}
                                                             className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                                 intentionalApproach === value.toString()
-                                                                    ? 'bg-green-600 text-white'
+                                                                    ? 'bg-blue-600 text-white'
                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                             }`}
                                                         >
@@ -225,7 +218,7 @@
                                                                             onClick={() => handlePurposeRatingChange(purpose, 'usefulness', value.toString())}
                                                                             className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
                                                                                 aiPurposeRatings[purpose]?.usefulness === value.toString()
-                                                                                    ? 'bg-green-600 text-white'
+                                                                                    ? 'bg-blue-600 text-white'
                                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                                             }`}
                                                                         >
@@ -251,7 +244,7 @@
                                                                             onClick={() => handlePurposeRatingChange(purpose, 'trust', value.toString())}
                                                                             className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
                                                                                 aiPurposeRatings[purpose]?.trust === value.toString()
-                                                                                    ? 'bg-green-600 text-white'
+                                                                                    ? 'bg-blue-600 text-white'
                                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                                             }`}
                                                                         >
@@ -304,7 +297,7 @@
                                                                         onClick={() => handlePurposeRatingChange('Other', 'usefulness', value.toString())}
                                                                         className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
                                                                             aiPurposeRatings['Other']?.usefulness === value.toString()
-                                                                                ? 'bg-green-600 text-white'
+                                                                                ? 'bg-blue-600 text-white'
                                                                                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                                         }`}
                                                                     >
@@ -330,7 +323,7 @@
                                                                         onClick={() => handlePurposeRatingChange('Other', 'trust', value.toString())}
                                                                         className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
                                                                             aiPurposeRatings['Other']?.trust === value.toString()
-                                                                                ? 'bg-green-600 text-white'
+                                                                                ? 'bg-blue-600 text-white'
                                                                                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                                         }`}
                                                                     >
@@ -351,7 +344,7 @@
                                 <div className="pt-4">
                                     <button
                                         type="submit"
-                                        className="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-green-600 hover:bg-green-700 text-white"
+                                        className="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white"
                                     >
                                         Continue
                                     </button>

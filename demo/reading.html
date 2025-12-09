@@ -1051,7 +1051,9 @@ Use markdown formatting for better readability:
                 const paper = papers.find(p => p.id === currentPaper);
                 if (paper && paper.url) {
                     try {
-                        const response = await fetch(paper.url);
+                        // Demo mode - adjust path for demo folder
+                        const paperUrl = '../' + paper.url;
+                        const response = await fetch(paperUrl);
                         const html = await response.text();
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, 'text/html');
@@ -1061,7 +1063,7 @@ Use markdown formatting for better readability:
                             setPaperContent(proseDiv.innerHTML);
 
                             // Load quiz questions
-                            fetch(`questions_data/${currentPaper}.json`)
+                            fetch(`../questions_data/${currentPaper}.json`)
                                 .then(res => res.ok ? res.json() : null)
                                 .then(data => {
                                     if (data && data.questions) {
@@ -1326,14 +1328,8 @@ Use markdown formatting for better readability:
                 };
 
                 return (
-                    <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 flex items-center justify-center p-4">
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
                         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
-                            {/* Demo Badge */}
-                            <div className="flex justify-center mb-4">
-                                <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
-                                    DEMO MODE - No data will be saved
-                                </span>
-                            </div>
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">📖</div>
                                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Paper Reading</h1>

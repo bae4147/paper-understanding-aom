@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo - Reading Experiment</title>
+    <title>Reading Experiment</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../papers-data.js"></script>
 </head>
@@ -28,20 +28,14 @@
             };
 
             return (
-                <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-8 px-4">
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
                     <div className="max-w-2xl mx-auto">
                         <div className="bg-white rounded-xl shadow-2xl p-8">
-                            {/* Demo Badge */}
-                            <div className="flex justify-center mb-6">
-                                <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
-                                    DEMO MODE - No data will be saved
-                                </span>
-                            </div>
-
                             {/* Header */}
                             <div className="text-center mb-8">
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Reading Experiment Demo</h1>
-                                <p className="text-gray-600">Try out the experiment interface without saving any data.</p>
+                                <div className="text-5xl mb-4">📚</div>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Reading Experiment</h1>
+                                <p className="text-gray-600">Select your condition and paper to begin.</p>
                             </div>
 
                             <div className="space-y-6">
@@ -58,7 +52,7 @@
                                         ].map(option => (
                                             <label key={option.value} className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                                                 condition === option.value
-                                                    ? 'border-green-500 bg-green-50'
+                                                    ? 'border-blue-500 bg-blue-50'
                                                     : 'border-gray-200 hover:bg-gray-50'
                                             }`}>
                                                 <input
@@ -87,7 +81,7 @@
                                         {papers.map(paper => (
                                             <label key={paper.id} className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                                                 currentPaper === paper.id
-                                                    ? 'border-green-500 bg-green-50'
+                                                    ? 'border-blue-500 bg-blue-50'
                                                     : 'border-gray-200 hover:bg-gray-50'
                                             }`}>
                                                 <input
@@ -107,14 +101,10 @@
                                 {/* Start Button */}
                                 <button
                                     onClick={handleStart}
-                                    className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-lg font-bold text-lg transition-colors"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg font-bold text-lg transition-colors"
                                 >
-                                    Start Demo
+                                    Start Experiment
                                 </button>
-
-                                <p className="text-center text-xs text-gray-400">
-                                    This is a demonstration version. No data will be collected or saved.
-                                </p>
                             </div>
                         </div>
                     </div>

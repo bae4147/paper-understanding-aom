@@ -51,22 +51,14 @@
             };
 
             return (
-                <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-8 px-4">
+                <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 py-8 px-4">
                     <div className="max-w-3xl mx-auto">
                         <div className="bg-white rounded-xl shadow-2xl p-8">
-                            {/* Demo Badge */}
-                            <div className="flex justify-center mb-4">
-                                <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
-                                    DEMO MODE - No data will be saved
-                                </span>
-                            </div>
-
                             {/* Header */}
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">📋</div>
                                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Post-Study Survey</h1>
                                 <p className="text-gray-600">Please evaluate your experience with the reading task.</p>
-                                <p className="text-sm text-gray-500 mt-2">(Simplified demo version - actual survey has more questions)</p>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-8">
@@ -89,7 +81,7 @@
                                                             onClick={() => setMentalDemand(value.toString())}
                                                             className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                                 mentalDemand === value.toString()
-                                                                    ? 'bg-green-600 text-white'
+                                                                    ? 'bg-blue-600 text-white'
                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                             }`}
                                                         >
@@ -115,7 +107,7 @@
                                                             onClick={() => setEffort(value.toString())}
                                                             className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                                 effort === value.toString()
-                                                                    ? 'bg-green-600 text-white'
+                                                                    ? 'bg-blue-600 text-white'
                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                             }`}
                                                         >
@@ -148,7 +140,7 @@
                                                             onClick={() => setOverallComprehension(value.toString())}
                                                             className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                                 overallComprehension === value.toString()
-                                                                    ? 'bg-green-600 text-white'
+                                                                    ? 'bg-blue-600 text-white'
                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                             }`}
                                                         >
@@ -174,7 +166,7 @@
                                                             onClick={() => setQuizConfidence(value.toString())}
                                                             className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                                 quizConfidence === value.toString()
-                                                                    ? 'bg-green-600 text-white'
+                                                                    ? 'bg-blue-600 text-white'
                                                                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                             }`}
                                                         >

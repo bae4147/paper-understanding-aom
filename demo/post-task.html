@@ -55,13 +55,6 @@
                 <div className="min-h-screen bg-gray-100 py-8 px-4">
                     <div className="max-w-3xl mx-auto">
                         <div className="bg-white rounded-xl shadow-2xl p-8">
-                            {/* Demo Badge */}
-                            <div className="flex justify-center mb-4">
-                                <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
-                                    DEMO MODE - No data will be saved
-                                </span>
-                            </div>
-
                             {/* Header */}
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">🎯</div>
@@ -87,7 +80,7 @@
                                     <textarea
                                         value={newStrategies}
                                         onChange={(e) => setNewStrategies(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                                         rows="6"
                                         required
                                     />
@@ -108,7 +101,7 @@
                                                     onClick={() => setThinkingChange(value.toString())}
                                                     className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                         thinkingChange === value.toString()
-                                                            ? 'bg-green-500 text-white'
+                                                            ? 'bg-teal-500 text-white'
                                                             : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                     }`}
                                                 >
@@ -135,7 +128,7 @@
                                                     onClick={() => setNewStrategyConfidence(value.toString())}
                                                     className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                         newStrategyConfidence === value.toString()
-                                                            ? 'bg-green-500 text-white'
+                                                            ? 'bg-teal-500 text-white'
                                                             : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                     }`}
                                                 >
@@ -162,7 +155,7 @@
                                                     onClick={() => setImplementationLikelihood(value.toString())}
                                                     className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
                                                         implementationLikelihood === value.toString()
-                                                            ? 'bg-green-500 text-white'
+                                                            ? 'bg-teal-500 text-white'
                                                             : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                     }`}
                                                 >
@@ -178,7 +171,7 @@
                                 <div className="pt-6 border-t">
                                     <button
                                         type="submit"
-                                        className="w-full bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 font-medium transition-colors text-lg"
+                                        className="w-full bg-teal-500 text-white py-3 px-6 rounded-lg hover:bg-teal-600 font-medium transition-colors text-lg"
                                     >
                                         Continue
                                     </button>
