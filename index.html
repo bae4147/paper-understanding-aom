@@ -69,7 +69,7 @@
         );
 
         // Timer Component
-        function Timer({ seconds, onComplete, isActive, phase, onTimeUpdate, isPaused }) {
+        function Timer({ seconds, onComplete, isActive, phase, onTimeUpdate }) {
             const [timeLeft, setTimeLeft] = useState(seconds);
 
             useEffect(() => {
@@ -77,7 +77,7 @@
             }, [phase, seconds]);
 
             useEffect(() => {
-                if (!isActive || isPaused) return;
+                if (!isActive) return;
 
                 const interval = setInterval(() => {
                     setTimeLeft(prev => {
@@ -93,7 +93,7 @@
                 }, 1000);
 
                 return () => clearInterval(interval);
-            }, [isActive, isPaused, onComplete, onTimeUpdate]);
+            }, [isActive, onComplete, onTimeUpdate]);
 
             const minutes = Math.floor(timeLeft / 60);
             const secs = timeLeft % 60;
@@ -122,9 +122,7 @@
             const [usedAiDuringReading, setUsedAiDuringReading] = useState(null); // null, 'yes', 'no'
             const [noAiAgreed, setNoAiAgreed] = useState(false); // For without_llm condition warning
             const [isRedirecting, setIsRedirecting] = useState(false); // To skip beforeunload during redirect
-            const [showEarlyFinishWarning, setShowEarlyFinishWarning] = useState(false); // Early finish warning popup
             const [readingTimeLeft, setReadingTimeLeft] = useState(20 * 60); // Track remaining time
-            const [isTimerPaused, setIsTimerPaused] = useState(false); // Pause timer during warning
 
             // Reading phase state
             const [scrollPosition, setScrollPosition] = useState(0);
@@ -1828,29 +1826,33 @@ Use markdown formatting for better readability:
                                     seconds={20 * 60}
                                     isActive={readingActive}
                                     phase="reading"
-                                    isPaused={isTimerPaused}
                                     onTimeUpdate={(time) => setReadingTimeLeft(time)}
                                     onComplete={() => {
                                         // Time's up - show popup and proceed
                                         setShowFinishPopup(true);
                                     }}
                                 />
-                                <button
-                                    onClick={() => {
-                                        if (readingTimeLeft > 0) {
-                                            // Still have time left - show warning
-                                            setIsTimerPaused(true);
-                                            setShowEarlyFinishWarning(true);
-                                        } else {
-                                            // Time's up - can proceed
-                                            setShowFinishPopup(true);
-                                        }
-                                    }}
-                                    className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                                >
-                                    <CheckIcon />
-                                    <span>Finish Reading</span>
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        onClick={() => setShowFinishPopup(true)}
+                                        disabled={readingTimeLeft > 0}
+                                        className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium ${
+                                            readingTimeLeft > 0
+                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                : 'bg-green-600 text-white hover:bg-green-700'
+                                        }`}
+                                    >
+                                        <CheckIcon />
+                                        <span>Finish Reading</span>
+                                    </button>
+                                    {readingTimeLeft > 0 && (
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                                            <div className="font-bold mb-1">Reading time 도중에는 다음으로 진행할 수 없습니다.</div>
+                                            <div className="text-gray-300">남은 시간 동안 마저 논문을 읽어주세요.</div>
+                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-8 border-transparent border-t-gray-800"></div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -2067,25 +2069,6 @@ Use markdown formatting for better readability:
                                 </div>
                             )}
                         </div>
-
-                        {/* Early Finish Warning Popup */}
-                        {showEarlyFinishWarning && (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">Reading time 도중에는 다음으로 진행할 수 없습니다.</h3>
-                                    <p className="text-gray-600 mb-6">남은 시간 동안 마저 논문을 읽어주세요.</p>
-                                    <button
-                                        onClick={() => {
-                                            setShowEarlyFinishWarning(false);
-                                            setIsTimerPaused(false);
-                                        }}
-                                        className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                                    >
-                                        확인
-                                    </button>
-                                </div>
-                            </div>
-                        )}
 
                         {/* Finish Popup */}
                         {showFinishPopup && (
