@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Post-Study Survey</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function PostStudySurvey() {
+            // Get params from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const condition = urlParams.get('condition') || 'without_llm';
+
+            // NASA-TLX
+            const [mentalDemand, setMentalDemand] = useState('');
+            const [effort, setEffort] = useState('');
+
+            // Self-efficacy
+            const [overallComprehension, setOverallComprehension] = useState('');
+            const [quizConfidence, setQuizConfidence] = useState('');
+
+            // LLM questions (conditional)
+            const [llmOverallUsefulness, setLlmOverallUsefulness] = useState('');
+
+            const isWithLLM = condition === 'with_llm' || condition === 'with_llm_extended';
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+
+                if (!mentalDemand || !effort || !overallComprehension || !quizConfidence) {
+                    alert('Please complete all required fields.');
+                    return;
+                }
+
+                if (isWithLLM && !llmOverallUsefulness) {
+                    alert('Please complete all LLM-related questions.');
+                    return;
+                }
+
+                // Demo mode - just navigate without saving
+                window.location.href = 'complete.html';
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-8 px-4">
+                    <div className="max-w-3xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-2xl p-8">
+                            {/* Demo Badge */}
+                            <div className="flex justify-center mb-4">
+                                <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
+                                    DEMO MODE - No data will be saved
+                                </span>
+                            </div>
+
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <div className="text-5xl mb-4">📋</div>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Post-Study Survey</h1>
+                                <p className="text-gray-600">Please evaluate your experience with the reading task.</p>
+                                <p className="text-sm text-gray-500 mt-2">(Simplified demo version - actual survey has more questions)</p>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-8">
+                                {/* Section 1: NASA-TLX */}
+                                <div className="border-b pb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 1. Task Load</h2>
+
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                Mental Demand: How mentally demanding was the task? *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Very Low</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setMentalDemand(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                mentalDemand === value.toString()
+                                                                    ? 'bg-green-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Very High</span>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                Effort: How hard did you have to work? *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Very Low</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setEffort(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                effort === value.toString()
+                                                                    ? 'bg-green-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Very High</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 2: Self-efficacy */}
+                                <div className="border-b pb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4">Section 2. Self-efficacy</h2>
+
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                How well do you feel you understood the article overall? *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Did not understand</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setOverallComprehension(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                overallComprehension === value.toString()
+                                                                    ? 'bg-green-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Completely understood</span>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                How confident are you that your quiz answers were correct? *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Not at all confident</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setQuizConfidence(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                quizConfidence === value.toString()
+                                                                    ? 'bg-green-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Extremely confident</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 3: LLM Usefulness (only for with_llm conditions) */}
+                                {isWithLLM && (
+                                    <div className="border-b pb-6">
+                                        <h2 className="text-xl font-bold text-gray-800 mb-4">Section 3. LLM Usefulness</h2>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                Overall, how useful was the LLM for reading and understanding the article?
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Not at all useful</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setLlmOverallUsefulness(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                llmOverallUsefulness === value.toString()
+                                                                    ? 'bg-purple-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Extremely useful</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Submit */}
+                                <div className="pt-6">
+                                    <button
+                                        type="submit"
+                                        className="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 font-medium transition-colors text-lg"
+                                    >
+                                        Complete Demo
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<PostStudySurvey />, document.getElementById('root'));
+    </script>
+</body>
+</html>

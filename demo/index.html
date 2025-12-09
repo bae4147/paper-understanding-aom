@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Reading Experiment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../papers-data.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        function DemoStart() {
+            const [condition, setCondition] = useState('without_llm');
+            const [currentPaper, setCurrentPaper] = useState('mroz2018');
+
+            const papers = typeof AVAILABLE_PAPERS !== 'undefined' ? AVAILABLE_PAPERS : [];
+
+            const handleStart = () => {
+                window.location.href = `pre-study-survey.html?condition=${condition}&paper=${currentPaper}`;
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-8 px-4">
+                    <div className="max-w-2xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-2xl p-8">
+                            {/* Demo Badge */}
+                            <div className="flex justify-center mb-6">
+                                <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
+                                    DEMO MODE - No data will be saved
+                                </span>
+                            </div>
+
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Reading Experiment Demo</h1>
+                                <p className="text-gray-600">Try out the experiment interface without saving any data.</p>
+                            </div>
+
+                            <div className="space-y-6">
+                                {/* Condition Selection */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-3">
+                                        Select Condition
+                                    </label>
+                                    <div className="space-y-2">
+                                        {[
+                                            { value: 'without_llm', label: 'Without LLM (Control)', desc: 'Read the paper without AI assistance' },
+                                            { value: 'with_llm', label: 'With LLM', desc: 'Read with AI chat assistant' },
+                                            { value: 'with_llm_extended', label: 'With LLM + Extended Resources', desc: 'Read with AI chat + video, audio, infographics' }
+                                        ].map(option => (
+                                            <label key={option.value} className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                                                condition === option.value
+                                                    ? 'border-green-500 bg-green-50'
+                                                    : 'border-gray-200 hover:bg-gray-50'
+                                            }`}>
+                                                <input
+                                                    type="radio"
+                                                    name="condition"
+                                                    value={option.value}
+                                                    checked={condition === option.value}
+                                                    onChange={(e) => setCondition(e.target.value)}
+                                                    className="w-4 h-4 mt-1"
+                                                />
+                                                <div>
+                                                    <span className="text-sm font-medium text-gray-800">{option.label}</span>
+                                                    <p className="text-xs text-gray-500 mt-1">{option.desc}</p>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Paper Selection */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-800 mb-3">
+                                        Select Paper
+                                    </label>
+                                    <div className="space-y-2">
+                                        {papers.map(paper => (
+                                            <label key={paper.id} className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                                                currentPaper === paper.id
+                                                    ? 'border-green-500 bg-green-50'
+                                                    : 'border-gray-200 hover:bg-gray-50'
+                                            }`}>
+                                                <input
+                                                    type="radio"
+                                                    name="paper"
+                                                    value={paper.id}
+                                                    checked={currentPaper === paper.id}
+                                                    onChange={(e) => setCurrentPaper(e.target.value)}
+                                                    className="w-4 h-4"
+                                                />
+                                                <span className="text-sm text-gray-700">{paper.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Start Button */}
+                                <button
+                                    onClick={handleStart}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-lg font-bold text-lg transition-colors"
+                                >
+                                    Start Demo
+                                </button>
+
+                                <p className="text-center text-xs text-gray-400">
+                                    This is a demonstration version. No data will be collected or saved.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<DemoStart />, document.getElementById('root'));
+    </script>
+</body>
+</html>
