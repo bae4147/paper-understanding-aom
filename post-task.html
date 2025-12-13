@@ -36,6 +36,7 @@
             // Get participant info from URL
             const urlParams = new URLSearchParams(window.location.search);
             const participantId = urlParams.get('participantId');
+            const experimentId = urlParams.get('experimentId');
             const condition = urlParams.get('condition') || 'without_llm';
             const paper = urlParams.get('paper') || 'mroz2018';
             const mode = urlParams.get('mode') || 'experiment';
@@ -50,11 +51,11 @@
             const [isSubmitting, setIsSubmitting] = useState(false);
 
             useEffect(() => {
-                if (!participantId) {
+                if (!participantId || !experimentId) {
                     alert('Missing participant information. Please start from the beginning.');
                     window.location.href = 'landing.html';
                 }
-            }, [participantId]);
+            }, [participantId, experimentId]);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
@@ -88,8 +89,9 @@
                 };
 
                 try {
-                    const userRef = db.collection('users').doc(participantId);
-                    await userRef.update({
+                    // Save to experiments collection
+                    const experimentRef = db.collection('experiments').doc(experimentId);
+                    await experimentRef.update({
                         postTask: postTaskData
                     });
 
@@ -98,6 +100,7 @@
                     // Navigate to post-study survey
                     const params = new URLSearchParams({
                         participantId,
+                        experimentId,
                         mode,
                         condition,
                         paper

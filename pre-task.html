@@ -36,6 +36,7 @@
             // Get participant info from URL
             const urlParams = new URLSearchParams(window.location.search);
             const participantId = urlParams.get('participantId');
+            const experimentId = urlParams.get('experimentId');
             const condition = urlParams.get('condition') || 'without_llm';
             const paper = urlParams.get('paper') || 'mroz2018';
             const mode = urlParams.get('mode') || 'experiment';
@@ -54,11 +55,11 @@
             const [isSubmitting, setIsSubmitting] = useState(false);
 
             useEffect(() => {
-                if (!participantId) {
+                if (!participantId || !experimentId) {
                     alert('Missing participant information. Please start from the beginning.');
                     window.location.href = 'landing.html';
                 }
-            }, [participantId]);
+            }, [participantId, experimentId]);
 
             // Word count helper
             const countWords = (text) => {
@@ -69,9 +70,9 @@
                 e.preventDefault();
                 if (isSubmitting) return;
 
-                // Validate strategies
-                if (!strategies.trim()) {
-                    alert('Please describe the strategies you used.');
+                // Validate strategies (min 10 words)
+                if (countWords(strategies) < 10) {
+                    alert('Please describe the strategies in at least 10 words.');
                     return;
                 }
                 if (!confidence) {
@@ -102,8 +103,9 @@
                 };
 
                 try {
-                    const userRef = db.collection('users').doc(participantId);
-                    await userRef.update({
+                    // Save to experiments collection
+                    const experimentRef = db.collection('experiments').doc(experimentId);
+                    await experimentRef.update({
                         preTask: preTaskData
                     });
 
@@ -112,6 +114,7 @@
                     // Navigate to main experiment
                     const params = new URLSearchParams({
                         participantId,
+                        experimentId,
                         mode,
                         condition,
                         paper

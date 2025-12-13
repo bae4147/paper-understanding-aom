@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reading Experiment - AOM</title>
+    <title>[테스트용 페이지] </title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -114,6 +114,7 @@
             // Experiment flow state
             const [phase, setPhase] = useState('setup'); // setup, reading-guide, reading, quiz-guide, quiz, review-guide, review, complete
             const [participantId, setParticipantId] = useState('');
+            const [experimentId, setExperimentId] = useState('');
             const [condition, setCondition] = useState('without_llm'); // without_llm, with_llm, with_llm_extended
             const [currentPaper, setCurrentPaper] = useState('mroz2018'); // Default paper
             const [sessionId] = useState(`session_${Date.now()}`);
@@ -122,7 +123,7 @@
             const [usedAiDuringReading, setUsedAiDuringReading] = useState(null); // null, 'yes', 'no'
             const [noAiAgreed, setNoAiAgreed] = useState(false); // For without_llm condition warning
             const [isRedirecting, setIsRedirecting] = useState(false); // To skip beforeunload during redirect
-            const [readingTimeLeft, setReadingTimeLeft] = useState(20 * 60); // Track remaining time
+            const [readingTimeLeft, setReadingTimeLeft] = useState(10); // Track remaining time (TEMP: 10 seconds for testing)
 
             // Reading phase state
             const [scrollPosition, setScrollPosition] = useState(0);
@@ -193,6 +194,7 @@
             // Quiz phase state
             const [quizActive, setQuizActive] = useState(false);
             const [quizAnswers, setQuizAnswers] = useState({});
+            const [quizConfidence, setQuizConfidence] = useState('');
 
             // In-tab quiz state (for LLM-extended right panel quiz)
             const [inTabQuizAnswers, setInTabQuizAnswers] = useState({});
@@ -283,30 +285,110 @@
             const [quizQuestions, setQuizQuestions] = useState([
                 {
                     id: 1,
-                    question: "The 'science of meetings' is defined as the systematic study of what occurs during which phase(s) of the meeting process?",
-                    options: ["Before, during, and after meetings, as well as their broader organizational context.", "Only the events that happen during the meeting itself.", "Primarily the design and preparation that happens before the meeting.", "Only the outcomes and follow-up actions after the meeting."],
-                    correctAnswer: "Before, during, and after meetings, as well as their broader organizational context.",
+                    question: "What is the primary goal of this review on the science of workplace meetings?",
+                    options: [
+                        "To analyze the historical evolution of meeting structures since the early 20th century.",
+                        "To argue for the complete elimination of meetings in modern organizations.",
+                        "To apply scientific findings about activities before, during, and after meetings to improve their success.",
+                        "To introduce a new psychological theory explaining why managers schedule so many meetings."
+                    ],
+                    correctAnswer: "To apply scientific findings about activities before, during, and after meetings to improve their success.",
                     type: "multiple_choice"
                 },
                 {
                     id: 2,
-                    question: "Which of the following is identified as a best practice for the 'Before the meeting' phase?",
-                    options: ["Circulating a written agenda in advance to all attendees.", "Intervening when communication patterns become dysfunctional.", "Sending out meeting minutes and action items.", "Actively encouraging everyone to participate."],
-                    correctAnswer: "Circulating a written agenda in advance to all attendees.",
+                    question: "The authors structure their evidence-based recommendations around which three key phases?",
+                    options: [
+                        "Design, Interaction, and Outcome.",
+                        "Planning, Execution, and Follow-up.",
+                        "Individual, Group, and Organization.",
+                        "Before, During, and After."
+                    ],
+                    correctAnswer: "Before, During, and After.",
                     type: "multiple_choice"
                 },
                 {
                     id: 3,
-                    question: "According to the article, satisfaction with meetings is a significant predictor of what broader employee attitude?",
-                    options: ["Overall job satisfaction", "Trust in senior leadership", "Perceptions of organizational strategy", "Satisfaction with pay and promotion opportunities"],
-                    correctAnswer: "Overall job satisfaction",
+                    question: "According to the abstract, what is a common perception of meetings among employees?",
+                    options: [
+                        "They are seen as a valuable opportunity for social interaction.",
+                        "They are the most productive part of the workday.",
+                        "They are considered essential for career advancement.",
+                        "Their value is often questioned and they are viewed as a routine necessity."
+                    ],
+                    correctAnswer: "Their value is often questioned and they are viewed as a routine necessity.",
                     type: "multiple_choice"
                 },
                 {
                     id: 4,
-                    question: "What is a critical action item for a meeting organizer to complete *after* a meeting has ended to ensure its effectiveness?",
-                    options: ["Following an agenda to keep the meeting on track.", "Starting the meeting on time.", "Ensuring only people with relevant expertise are invited.", "Sending meeting minutes with an action plan to all relevant parties."],
-                    correctAnswer: "Sending meeting minutes with an action plan to all relevant parties.",
+                    question: "The 'Before the meeting' section advises against holding a meeting for which of the following purposes?",
+                    options: [
+                        "To solve a new problem that requires different expertise.",
+                        "To share routine, nonurgent information without discussion.",
+                        "To develop and implement an organizational strategy.",
+                        "To have a team debrief after a performance episode."
+                    ],
+                    correctAnswer: "To share routine, nonurgent information without discussion.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 5,
+                    question: "In the 'During the meeting' section, what effect of humor and laughter patterns is mentioned?",
+                    options: [
+                        "They can stimulate positive behaviors that predict team performance.",
+                        "They are effective only when initiated by the meeting leader.",
+                        "They are typically used by low-performing employees to avoid contributing to the discussion.",
+                        "They are a common cause of meetings getting off topic and running too long."
+                    ],
+                    correctAnswer: "They can stimulate positive behaviors that predict team performance.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 6,
+                    question: "According to the 'After the meeting' section, what is a primary reason for sending out meeting minutes?",
+                    options: [
+                        "To facilitate follow-through by clarifying action plans and responsibilities.",
+                        "To survey attendees about their satisfaction with the meeting's length.",
+                        "To serve as an official agenda for the next scheduled meeting.",
+                        "To allow attendees to dispute any decisions that were made."
+                    ],
+                    correctAnswer: "To facilitate follow-through by clarifying action plans and responsibilities.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 7,
+                    question: "By synthesizing information from the 'Before' and 'After' meeting sections, what can be inferred about the link between meeting attendance and job satisfaction?",
+                    options: [
+                        "Carefully selecting relevant attendees before a meeting can positively impact their long-term job satisfaction.",
+                        "Higher job satisfaction causes employees to seek out and attend more meetings.",
+                        "The more meetings an employee attends, regardless of quality, the lower their job satisfaction will be.",
+                        "Job satisfaction is primarily linked to meeting length, which is determined before the meeting begins."
+                    ],
+                    correctAnswer: "Carefully selecting relevant attendees before a meeting can positively impact their long-term job satisfaction.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 8,
+                    question: "Based on the article, a manager aiming to improve their team's meetings should focus on which two distinct areas of responsibility?",
+                    options: [
+                        "The psychological well-being of attendees and the financial cost of the meeting.",
+                        "The use of advanced technology and the enforcement of punctuality.",
+                        "The structural design before the meeting and active facilitation during the meeting.",
+                        "The frequency of meetings and the long-term career growth of participants."
+                    ],
+                    correctAnswer: "The structural design before the meeting and active facilitation during the meeting.",
+                    type: "multiple_choice"
+                },
+                {
+                    id: 9,
+                    question: "What long-term strategy, combining multiple evidence-based practices from the article, would most effectively improve an organization's overall meeting culture?",
+                    options: [
+                        "Train all high-performing employees on how to participate more effectively in meetings.",
+                        "Systematically survey meeting satisfaction, use the feedback to re-evaluate routine meetings, and adjust their design accordingly.",
+                        "Invest heavily in videoconferencing technology to reduce the need for in-person meetings.",
+                        "Implement a strict policy that all meetings must start on time and have an agenda."
+                    ],
+                    correctAnswer: "Systematically survey meeting satisfaction, use the feedback to re-evaluate routine meetings, and adjust their design accordingly.",
                     type: "multiple_choice"
                 },
             ]);
@@ -317,16 +399,23 @@
                 'Introduction': { start: 200, end: 800 },
             });
 
-            // Initialize from URL parameters (when coming from pre-study-survey)
+            // Initialize from URL parameters (when coming from pre-task)
             useEffect(() => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const pid = urlParams.get('participantId');
+                const expId = urlParams.get('experimentId');
                 const cond = urlParams.get('condition');
                 const paper = urlParams.get('paper');
 
                 if (pid) setParticipantId(pid);
+                if (expId) setExperimentId(expId);
                 if (cond) setCondition(cond);
                 if (paper) setCurrentPaper(paper);
+
+                // Skip setup phase if coming from landing.html (has experimentId)
+                if (expId) {
+                    setPhase('reading-guide');
+                }
             }, []);
 
             // Expose current phase to window for feedback widget
@@ -1420,6 +1509,7 @@ Use markdown formatting for better readability:
 
                         await window.firebaseUpdateDoc(experimentRef, {
                             'quiz.answers': quizAnswers,
+                            'quiz.confidence': parseInt(quizConfidence) || null,
                             'quiz.duration': quizDuration,
                             'quiz.gradingDetails': gradingDetails,
                             'quiz.correctCount': correctCount,
@@ -1441,6 +1531,7 @@ Use markdown formatting for better readability:
                 const mode = urlParams.get('mode') || 'experiment';
                 const params = new URLSearchParams({
                     participantId,
+                    experimentId,
                     mode,
                     condition,
                     paper: currentPaper
@@ -1650,7 +1741,7 @@ Use markdown formatting for better readability:
                                         : 'bg-blue-600 text-white hover:bg-blue-700'
                                 }`}
                             >
-                                Start →
+                                Start Reading →
                             </button>
                         </div>
                     </div>
@@ -1831,7 +1922,7 @@ Use markdown formatting for better readability:
                             </div>
                             <div className="flex items-center space-x-4">
                                 <Timer
-                                    seconds={20 * 60}
+                                    seconds={10}
                                     isActive={readingActive}
                                     phase="reading"
                                     onTimeUpdate={(time) => setReadingTimeLeft(time)}
@@ -2299,6 +2390,35 @@ Use markdown formatting for better readability:
                                         </div>
                                     </div>
                                 ))}
+
+                                {/* Quiz Confidence */}
+                                <div className="bg-white rounded-lg shadow-md p-6 mt-8 border-t-4 border-blue-500">
+                                    <div className="mb-4">
+                                        <p className="font-medium text-gray-900 mb-2">
+                                            How confident are you that you answered the quiz questions correctly? *
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-gray-500">Not at all confident</span>
+                                        <div className="flex space-x-1">
+                                            {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => setQuizConfidence(value.toString())}
+                                                    className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                        quizConfidence === value.toString()
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                    }`}
+                                                >
+                                                    {value}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <span className="text-xs text-gray-500">Extremely confident</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="mt-8 p-4 bg-gray-100 rounded-lg">
@@ -2386,7 +2506,7 @@ Use markdown formatting for better readability:
                             </div>
                             <div className="flex items-center space-x-4">
                                 <Timer
-                                    seconds={20 * 60}
+                                    seconds={10}
                                     isActive={reviewActive}
                                     phase="review"
                                     onComplete={() => alert('Review time is up!')}

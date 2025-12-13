@@ -36,6 +36,7 @@
             // Get participant info from URL
             const urlParams = new URLSearchParams(window.location.search);
             const participantId = urlParams.get('participantId');
+            const experimentId = urlParams.get('experimentId');
             const condition = urlParams.get('condition');
             const mode = urlParams.get('mode');
 
@@ -52,10 +53,17 @@
             const [overallComprehension, setOverallComprehension] = useState('');
             const [keyConceptsUnderstanding, setKeyConceptsUnderstanding] = useState('');
             const [findingsUnderstanding, setFindingsUnderstanding] = useState('');
-            const [practicalApplications, setPracticalApplications] = useState('');
+            // const [practicalApplications, setPracticalApplications] = useState(''); // Removed - no longer needed
 
-            // Quiz Confidence
-            const [quizConfidence, setQuizConfidence] = useState('');
+            // Quiz Confidence - moved to index.html quiz section
+            // const [quizConfidence, setQuizConfidence] = useState('');
+
+            // Critical Engagement with the Article
+            const [criticalOwnIdeas, setCriticalOwnIdeas] = useState('');
+            const [criticalAlternativePerspectives, setCriticalAlternativePerspectives] = useState('');
+            const [criticalVerifyCredibility, setCriticalVerifyCredibility] = useState('');
+            const [criticalQuestionClaims, setCriticalQuestionClaims] = useState('');
+            const [criticalBroaderImplications, setCriticalBroaderImplications] = useState('');
 
             // Section 3: LLM Usefulness (only for with_llm conditions)
             const [llmOverallUsefulness, setLlmOverallUsefulness] = useState('');
@@ -138,11 +146,11 @@
             const [englishProficiency, setEnglishProficiency] = useState('');
 
             useEffect(() => {
-                if (!participantId) {
+                if (!participantId || !experimentId) {
                     alert('Missing participant information. Please start from the beginning.');
                     window.location.href = 'landing.html';
                 }
-            }, [participantId]);
+            }, [participantId, experimentId]);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
@@ -150,8 +158,9 @@
 
                 // Validation for required fields
                 if (!mentalDemand || !physicalDemand || !temporalDemand || !performance || !effort || !frustration ||
-                    !overallComprehension || !keyConceptsUnderstanding || !findingsUnderstanding || !practicalApplications ||
-                    !quizConfidence || !llmFrequency ||
+                    !overallComprehension || !keyConceptsUnderstanding || !findingsUnderstanding ||
+                    !criticalOwnIdeas || !criticalAlternativePerspectives || !criticalVerifyCredibility || !criticalQuestionClaims || !criticalBroaderImplications ||
+                    !llmFrequency ||
                     !age || !gender || !workingSituation || !workHoursPerWeek || !yearsInOrganization || !yearsInJob ||
                     !jobTitle || !industry || !ethnicity || !education || !englishProficiency) {
                     alert('Please complete all required fields.');
@@ -187,12 +196,17 @@
                     },
                     selfEfficacy: {
                         overallComprehension: {
-                            overall: parseInt(overallComprehension),
-                            keyConcepts: parseInt(keyConceptsUnderstanding),
-                            findings: parseInt(findingsUnderstanding),
-                            practicalApplications: parseInt(practicalApplications)
+                            overallGoal: parseInt(overallComprehension),
+                            authorsReasoning: parseInt(keyConceptsUnderstanding),
+                            connectingIdeas: parseInt(findingsUnderstanding)
                         },
-                        quizConfidence: parseInt(quizConfidence)
+                        criticalEngagement: {
+                            ownIdeas: parseInt(criticalOwnIdeas),
+                            alternativePerspectives: parseInt(criticalAlternativePerspectives),
+                            verifyCredibility: parseInt(criticalVerifyCredibility),
+                            questionClaims: parseInt(criticalQuestionClaims),
+                            broaderImplications: parseInt(criticalBroaderImplications)
+                        }
                     },
                     aiUsage: {
                         frequency: llmFrequency,
@@ -241,13 +255,22 @@
                 }
 
                 try {
-                    const userRef = db.collection('users').doc(participantId);
-                    await userRef.update({
+                    // Save survey data to experiments collection
+                    const experimentRef = db.collection('experiments').doc(experimentId);
+                    await experimentRef.update({
                         postStudySurvey: surveyData,
+                        status: 'completed',
                         completedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
-                    console.log('Post-study survey saved');
+                    // Update user status to completed
+                    const userRef = db.collection('users').doc(participantId);
+                    await userRef.update({
+                        status: 'completed',
+                        completedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    console.log('Post-study survey saved, experiment completed');
 
                     // Navigate to completion page
                     window.location.href = `complete.html?participantId=${participantId}`;
@@ -459,10 +482,10 @@
                                         <div className="space-y-8">
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How well do you feel you understood the article overall?*
+                                                    I understood the overall goal and main takeaways of the article. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
-                                                    <span className="text-xs text-gray-500">Did not understand</span>
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
                                                     <div className="flex space-x-1">
                                                         {[1, 2, 3, 4, 5, 6, 7].map(value => (
                                                             <button
@@ -479,16 +502,16 @@
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <span className="text-xs text-gray-500">Completely understood</span>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
                                                 </div>
                                             </div>
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How well do you feel you understood the key concepts?*
+                                                    I understood the authors' explanations and reasoning presented in the main text. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
-                                                    <span className="text-xs text-gray-500">Did not understand</span>
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
                                                     <div className="flex space-x-1">
                                                         {[1, 2, 3, 4, 5, 6, 7].map(value => (
                                                             <button
@@ -505,16 +528,16 @@
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <span className="text-xs text-gray-500">Completely understood</span>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
                                                 </div>
                                             </div>
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How well do you feel you understood the research findings?*
+                                                    I was able to connect different sections or ideas across the article. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
-                                                    <span className="text-xs text-gray-500">Did not understand</span>
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
                                                     <div className="flex space-x-1">
                                                         {[1, 2, 3, 4, 5, 6, 7].map(value => (
                                                             <button
@@ -531,24 +554,32 @@
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <span className="text-xs text-gray-500">Completely understood</span>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
 
+                                    {/* Critical Engagement with the Article */}
+                                    <div className="mt-8">
+                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">2. Critical Engagement with the Article</h3>
+                                        <p className="text-sm text-gray-600 mb-4">Please rate your agreement with the following statements.</p>
+
+                                        <div className="space-y-8">
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How confident are you that you can apply the article's recommendations in practice?*
+                                                    I explored my own ideas and interpretations related to the article. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
-                                                    <span className="text-xs text-gray-500">Not at all confident</span>
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
                                                     <div className="flex space-x-1">
                                                         {[1, 2, 3, 4, 5, 6, 7].map(value => (
                                                             <button
                                                                 key={value}
                                                                 type="button"
-                                                                onClick={() => setPracticalApplications(value.toString())}
+                                                                onClick={() => setCriticalOwnIdeas(value.toString())}
                                                                 className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
-                                                                    practicalApplications === value.toString()
+                                                                    criticalOwnIdeas === value.toString()
                                                                         ? 'bg-blue-600 text-white'
                                                                         : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
                                                                 }`}
@@ -557,40 +588,112 @@
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <span className="text-xs text-gray-500">Extremely confident</span>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Quiz Confidence */}
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">2. Quiz Confidence</h3>
-                                        <p className="text-sm text-gray-600 mb-4">Please rate your confidence in the quiz you just completed.*</p>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Overall, how confident are you that your quiz answers were correct?*
-                                            </label>
-                                            <div className="flex items-center justify-between mt-3">
-                                                <span className="text-xs text-gray-500">Not at all confident</span>
-                                                <div className="flex space-x-1">
-                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                        <button
-                                                            key={value}
-                                                            type="button"
-                                                            onClick={() => setQuizConfidence(value.toString())}
-                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
-                                                                quizConfidence === value.toString()
-                                                                    ? 'bg-blue-600 text-white'
-                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        >
-                                                            {value}
-                                                        </button>
-                                                    ))}
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                    I generated alternative perspectives that challenged some of the article's ideas. *
+                                                </label>
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
+                                                    <div className="flex space-x-1">
+                                                        {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                            <button
+                                                                key={value}
+                                                                type="button"
+                                                                onClick={() => setCriticalAlternativePerspectives(value.toString())}
+                                                                className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                    criticalAlternativePerspectives === value.toString()
+                                                                        ? 'bg-blue-600 text-white'
+                                                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                {value}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
                                                 </div>
-                                                <span className="text-xs text-gray-500">Extremely confident</span>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                    I thought about how to verify the credibility of the information sources cited in the article. *
+                                                </label>
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
+                                                    <div className="flex space-x-1">
+                                                        {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                            <button
+                                                                key={value}
+                                                                type="button"
+                                                                onClick={() => setCriticalVerifyCredibility(value.toString())}
+                                                                className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                    criticalVerifyCredibility === value.toString()
+                                                                        ? 'bg-blue-600 text-white'
+                                                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                {value}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                    I questioned what I read to judge whether the claims were convincing. *
+                                                </label>
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
+                                                    <div className="flex space-x-1">
+                                                        {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                            <button
+                                                                key={value}
+                                                                type="button"
+                                                                onClick={() => setCriticalQuestionClaims(value.toString())}
+                                                                className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                    criticalQuestionClaims === value.toString()
+                                                                        ? 'bg-blue-600 text-white'
+                                                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                {value}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                    I reflected on the broader implications of the article (e.g., for my team, organization, or decisions). *
+                                                </label>
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <span className="text-xs text-gray-500">Strongly disagree</span>
+                                                    <div className="flex space-x-1">
+                                                        {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                            <button
+                                                                key={value}
+                                                                type="button"
+                                                                onClick={() => setCriticalBroaderImplications(value.toString())}
+                                                                className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                    criticalBroaderImplications === value.toString()
+                                                                        ? 'bg-blue-600 text-white'
+                                                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                {value}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">Strongly agree</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -605,7 +708,7 @@
                                         <div className="space-y-8">
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    Overall, how useful was the LLM for reading and understanding the article?
+                                                    Overall, how useful was the LLM for reading and understanding the article?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all useful</span>
@@ -631,7 +734,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How helpful was the LLM for understanding difficult concepts or terminology?
+                                                    How helpful was the LLM for understanding difficult concepts or terminology?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -657,7 +760,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How helpful was the LLM for understanding the research findings?
+                                                    How helpful was the LLM for understanding the research findings?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -683,7 +786,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How helpful was the LLM for understanding practical applications?
+                                                    How helpful was the LLM for understanding practical applications?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -709,7 +812,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How much did the LLM help you save time?
+                                                    How much did the LLM help you save time?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -745,7 +848,7 @@
                                         <div className="space-y-8">
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    Overall, the LLM was competent and effective as a tool for assisting with reading.
+                                                    Overall, the LLM was competent and effective as a tool for assisting with reading. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -771,7 +874,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    The information provided by the LLM was accurate.
+                                                    The information provided by the LLM was accurate. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -797,7 +900,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I believe the LLM is made with my best interests in mind.
+                                                    I believe the LLM is made with my best interests in mind. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -823,7 +926,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I can always rely on the LLM when understanding articles.
+                                                    I can always rely on the LLM when understanding articles. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -849,7 +952,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I have no reservations about acting on the information provided by the LLM.
+                                                    I have no reservations about acting on the information provided by the LLM. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -875,7 +978,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I have no hesitation in using the information provided by the LLM.
+                                                    I have no hesitation in using the information provided by the LLM. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
