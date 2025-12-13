@@ -41,9 +41,36 @@
             const paper = urlParams.get('paper') || 'mroz2018';
             const mode = urlParams.get('mode') || 'experiment';
 
-            // Pre-task responses - Strategies
-            const [strategies, setStrategies] = useState('');
+            // Pre-task responses - Strategies (multiple fields)
+            const [strategies, setStrategies] = useState(['']);
             const [confidence, setConfidence] = useState('');
+
+            // Add new strategy field
+            const addStrategyField = () => {
+                if (strategies.length < 10) {
+                    setStrategies([...strategies, '']);
+                }
+            };
+
+            // Update strategy at index
+            const updateStrategy = (index, value) => {
+                const newStrategies = [...strategies];
+                newStrategies[index] = value;
+                setStrategies(newStrategies);
+            };
+
+            // Remove strategy at index
+            const removeStrategy = (index) => {
+                if (strategies.length > 1) {
+                    const newStrategies = strategies.filter((_, i) => i !== index);
+                    setStrategies(newStrategies);
+                }
+            };
+
+            // Get non-empty strategies
+            const getFilledStrategies = () => {
+                return strategies.filter(s => s.trim().length > 0);
+            };
 
             // Overall approach clarity
             const [approachClarity, setApproachClarity] = useState('');
@@ -70,9 +97,10 @@
                 e.preventDefault();
                 if (isSubmitting) return;
 
-                // Validate strategies (min 10 words)
-                if (countWords(strategies) < 10) {
-                    alert('Please describe the strategies in at least 10 words.');
+                // Validate strategies (at least 1 non-empty)
+                const filledStrategies = getFilledStrategies();
+                if (filledStrategies.length === 0) {
+                    alert('Please enter at least one strategy.');
                     return;
                 }
                 if (!confidence) {
@@ -86,16 +114,10 @@
                     return;
                 }
 
-                // Validate challenges (min 10 words)
-                if (countWords(challenges) < 10) {
-                    alert('Please describe the challenges in at least 10 words.');
-                    return;
-                }
-
                 setIsSubmitting(true);
 
                 const preTaskData = {
-                    strategies: strategies.trim(),
+                    strategies: filledStrategies,
                     confidence: parseInt(confidence),
                     approachClarity: parseInt(approachClarity),
                     challenges: challenges.trim(),
@@ -158,15 +180,47 @@
                                     <label className="block text-base font-bold text-gray-800 mb-3">
                                         Q1. Please list the specific strategies you used to make this meeting more effective. *
                                     </label>
-                                    <textarea
-                                        value={strategies}
-                                        onChange={(e) => setStrategies(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                                        rows="6"
-                                        placeholder=""
-                                        required
-                                    />
-                                    <div className="mt-4">
+                                    <p className="text-sm text-gray-600 mb-4">Enter one strategy per field. Click "Add Strategy" to add more.</p>
+
+                                    <div className="space-y-3">
+                                        {strategies.map((strategy, index) => (
+                                            <div key={index} className="flex items-center space-x-3">
+                                                <span className="text-sm font-medium text-gray-500 w-6">{index + 1}.</span>
+                                                <input
+                                                    type="text"
+                                                    value={strategy}
+                                                    onChange={(e) => updateStrategy(index, e.target.value)}
+                                                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                                    placeholder={`Strategy ${index + 1}`}
+                                                />
+                                                {strategies.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeStrategy(index)}
+                                                        className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Remove"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {strategies.length < 10 && (
+                                        <div className="flex items-center space-x-3 mt-3">
+                                            <span className="w-6"></span>
+                                            <button
+                                                type="button"
+                                                onClick={addStrategyField}
+                                                className="px-4 py-2 text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors text-sm font-medium"
+                                            >
+                                                + Add Strategy
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <div className="mt-6">
                                         <label className="block text-sm font-bold text-gray-600 mb-2">
                                             How confident are you that these strategies improved the meeting's effectiveness? *
                                         </label>
@@ -225,9 +279,6 @@
                                     <label className="block text-sm font-bold text-gray-800 mb-2">
                                         Q3. Please briefly describe any challenges or difficulties you experienced during this meeting. *
                                     </label>
-                                    <p className="text-xs text-gray-500 mb-3">
-                                        Minimum 10 words required. Current: <span className={countWords(challenges) >= 10 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{countWords(challenges)}</span> words
-                                    </p>
                                     <textarea
                                         value={challenges}
                                         onChange={(e) => setChallenges(e.target.value)}
