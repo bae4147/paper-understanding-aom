@@ -169,9 +169,9 @@
                         }
                     }
 
-                    // Step 2: Determine condition
+                    // Step 2: Determine condition and paper
                     let assignedCondition;
-                    let assignedPaper = currentPaper;
+                    let assignedPaper = currentPaper || 'mroz2018';  // Default to mroz2018 if not selected
 
                     if (mode === 'test') {
                         // Test mode: use manually selected condition
