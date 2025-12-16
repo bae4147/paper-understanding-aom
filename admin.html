@@ -40,8 +40,29 @@
             const [view, setView] = useState('list');
             const chartRefs = useRef({});
 
+            // Condition counts from meta/conditionCounts
+            const [conditionCounts, setConditionCounts] = useState({
+                without_llm: 0,
+                with_llm: 0,
+                with_llm_extended: 0
+            });
+
+            // Load condition counts
+            const loadConditionCounts = async () => {
+                try {
+                    const counterRef = db.collection('meta').doc('conditionCounts');
+                    const doc = await counterRef.get();
+                    if (doc.exists) {
+                        setConditionCounts(doc.data());
+                    }
+                } catch (error) {
+                    console.error('Error loading condition counts:', error);
+                }
+            };
+
             useEffect(() => {
                 loadExperiments();
+                loadConditionCounts();
             }, []);
 
             // Cleanup charts
@@ -65,8 +86,8 @@
                             id: doc.id,
                             ...data,
                             events: data.reading?.events || [],
-                            startedAt: data.startedAt?.toDate?.() || data.createdAt,
-                            completedAt: data.completedAt?.toDate?.() || null
+                            startedAt: data.createdAt?.toDate?.() || data.readingStartedAt?.toDate?.() || null,
+                            completedAt: data.completedAt?.toDate?.() || data.reading?.completedAt?.toDate?.() || null
                         };
                     });
                     
@@ -326,68 +347,109 @@
                                 <div className="bg-white rounded-lg shadow p-6 mb-6">
                                     <h2 className="text-xl font-bold mb-6">Reading Pattern Classification</h2>
                                     
-                                    {/* Tab Usage Distribution (맨 위, with_llm만) */}
+                                    {/* Panel Focus Distribution - using focusTimes from reading data */}
+                                    {/* This tracks which PANEL (reading vs right panel tabs) had user focus */}
                                     {(() => {
                                         console.log('🔍 Condition:', selectedExperiment.condition);
-                                        console.log('🔍 Analysis:', analysis);
+                                        console.log('🔍 selectedExperiment.reading:', selectedExperiment.reading);
+                                        console.log('🔍 focusTimes:', selectedExperiment.reading?.focusTimes);
 
-                                        // Reading tab time = Reading + Scanning + Scrolling 행동 시간
-                                        const readingTabTime = analysis.summary.reading.duration +
-                                                              analysis.summary.scanning.duration +
-                                                              analysis.summary.scrolling.duration;
-                                        // AI tab time = LLM 시간
-                                        const aiTabTime = analysis.summary.llm.duration;
-                                        const totalTime = readingTabTime + aiTabTime;
+                                        // Try to get focusTimes from reading data
+                                        let focusTimes = selectedExperiment.reading?.focusTimes;
 
-                                        console.log('🔍 Reading time:', readingTabTime, 'LLM time:', aiTabTime);
+                                        // If no focusTimes, try to calculate from analysis (fallback for old data)
+                                        if (!focusTimes && analysis) {
+                                            const readingTime = analysis.summary.reading.duration +
+                                                               analysis.summary.scanning.duration +
+                                                               analysis.summary.scrolling.duration;
+                                            const chatTime = analysis.summary.llm.duration;
+                                            focusTimes = {
+                                                reading: readingTime,
+                                                chat: chatTime,
+                                                audio: 0,
+                                                video: 0,
+                                                infographics: 0,
+                                                simplified: 0
+                                            };
+                                            console.log('🔍 Using fallback focusTimes from analysis:', focusTimes);
+                                        }
+
+                                        if (!focusTimes) return null;
+
+                                        const condition = selectedExperiment.condition;
+                                        const isExtended = condition === 'with_llm_extended';
+                                        const isWithLLM = condition === 'with_llm' || isExtended;
+
+                                        // Calculate times based on condition
+                                        const readingTime = focusTimes.reading || 0;
+                                        const chatTime = focusTimes.chat || 0;
+                                        const audioTime = focusTimes.audio || 0;
+                                        const videoTime = focusTimes.video || 0;
+                                        const infographicsTime = focusTimes.infographics || 0;
+                                        const simplifiedTime = focusTimes.simplified || 0;
+                                        const quizTime = focusTimes.quiz || 0;
+
+                                        let totalTime;
+                                        if (isExtended) {
+                                            totalTime = readingTime + chatTime + audioTime + videoTime + infographicsTime + simplifiedTime + quizTime;
+                                        } else if (isWithLLM) {
+                                            totalTime = readingTime + chatTime;
+                                        } else {
+                                            totalTime = readingTime;
+                                        }
 
                                         if (totalTime === 0) return null;
 
-                                        const readingPercent = (readingTabTime / totalTime * 100);
-                                        const aiPercent = (aiTabTime / totalTime * 100);
+                                        const getPercent = (time) => (time / totalTime * 100);
+
+                                        // Tab config with colors
+                                        const tabs = [
+                                            { key: 'reading', label: 'Reading', time: readingTime, color: 'bg-emerald-500', textColor: 'text-emerald-600' },
+                                            { key: 'chat', label: 'Chat', time: chatTime, color: 'bg-purple-500', textColor: 'text-purple-600', show: isWithLLM },
+                                            { key: 'audio', label: 'Audio', time: audioTime, color: 'bg-blue-500', textColor: 'text-blue-600', show: isExtended },
+                                            { key: 'video', label: 'Video', time: videoTime, color: 'bg-red-500', textColor: 'text-red-600', show: isExtended },
+                                            { key: 'infographics', label: 'Infographics', time: infographicsTime, color: 'bg-yellow-500', textColor: 'text-yellow-600', show: isExtended },
+                                            { key: 'quiz', label: 'Quiz', time: quizTime, color: 'bg-orange-500', textColor: 'text-orange-600', show: isExtended },
+                                            { key: 'simplified', label: 'Simplified', time: simplifiedTime, color: 'bg-teal-500', textColor: 'text-teal-600', show: isExtended },
+                                        ].filter(tab => tab.show !== false && tab.time > 0);
 
                                         return (
                                             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                                                <h3 className="text-md font-semibold mb-3">Tab Usage Distribution</h3>
+                                                <h3 className="text-md font-semibold mb-3">Time Distribution</h3>
+                                                <p className="text-xs text-gray-500 mb-3">Time spent on each area during the reading session</p>
 
                                                 {/* Horizontal Bar */}
                                                 <div className="h-12 bg-gray-200 rounded-lg overflow-hidden flex shadow-sm mb-3">
-                                                    <div
-                                                        className="bg-emerald-500 flex items-center justify-center text-white font-semibold transition-all"
-                                                        style={{ width: `${readingPercent}%` }}
-                                                    >
-                                                        {readingPercent > 10 ? `Reading ${readingPercent.toFixed(0)}%` : ''}
-                                                    </div>
-                                                    <div
-                                                        className="bg-purple-500 flex items-center justify-center text-white font-semibold transition-all"
-                                                        style={{ width: `${aiPercent}%` }}
-                                                    >
-                                                        {aiPercent > 10 ? `AI ${aiPercent.toFixed(0)}%` : ''}
-                                                    </div>
+                                                    {tabs.map(tab => {
+                                                        const percent = getPercent(tab.time);
+                                                        return (
+                                                            <div
+                                                                key={tab.key}
+                                                                className={`${tab.color} flex items-center justify-center text-white font-semibold transition-all text-xs`}
+                                                                style={{ width: `${percent}%` }}
+                                                                title={`${tab.label}: ${(tab.time / 1000 / 60).toFixed(1)}m (${percent.toFixed(0)}%)`}
+                                                            >
+                                                                {percent > 8 ? `${tab.label} ${percent.toFixed(0)}%` : ''}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
 
-                                                {/* Stats */}
-                                                <div className="grid grid-cols-3 gap-3 text-sm">
+                                                {/* Stats Grid */}
+                                                <div className={`grid gap-3 text-sm ${isExtended ? 'grid-cols-4 md:grid-cols-7' : isWithLLM ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                                                    {tabs.map(tab => (
+                                                        <div key={tab.key} className="text-center">
+                                                            <span className="text-gray-600 text-xs block">{tab.label}</span>
+                                                            <span className={`font-bold ${tab.textColor}`}>
+                                                                {(tab.time / 1000 / 60).toFixed(1)}m
+                                                            </span>
+                                                            <span className="text-xs text-gray-500 ml-1">
+                                                                ({getPercent(tab.time).toFixed(0)}%)
+                                                            </span>
+                                                        </div>
+                                                    ))}
                                                     <div className="text-center">
-                                                        <span className="text-gray-600">Reading Tab: </span>
-                                                        <span className="font-bold text-emerald-600">
-                                                            {(readingTabTime / 1000 / 60).toFixed(1)}m
-                                                        </span>
-                                                        <span className="text-xs text-gray-500 ml-1">
-                                                            ({readingPercent.toFixed(0)}%)
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <span className="text-gray-600">AI Tab: </span>
-                                                        <span className="font-bold text-purple-600">
-                                                            {(aiTabTime / 1000 / 60).toFixed(1)}m
-                                                        </span>
-                                                        <span className="text-xs text-gray-500 ml-1">
-                                                            ({aiPercent.toFixed(0)}%)
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <span className="text-gray-600">Total: </span>
+                                                        <span className="text-gray-600 text-xs block">Total</span>
                                                         <span className="font-bold text-gray-700">
                                                             {(totalTime / 1000 / 60).toFixed(1)}m
                                                         </span>
@@ -480,67 +542,6 @@
                                 <div className="bg-white rounded-lg shadow p-6 mb-6">
                                     <h2 className="text-xl font-bold mb-4">Extended Resources Usage</h2>
 
-                                    {/* Tab Usage Times */}
-                                    {selectedExperiment.extendedResources?.tabUsageTimes && (
-                                        <div className="mb-6">
-                                            <h3 className="text-md font-semibold mb-3">Tab Usage Distribution</h3>
-                                            {(() => {
-                                                const times = selectedExperiment.extendedResources.tabUsageTimes;
-                                                const total = (times.infographics || 0) + (times.audio || 0) +
-                                                             (times.simplified || 0) + (times.chat || 0);
-
-                                                if (total === 0) return <p className="text-gray-500">No tab usage data</p>;
-
-                                                const tabs = [
-                                                    { name: 'Infographics', key: 'infographics', color: 'bg-blue-500', icon: '📊' },
-                                                    { name: 'Audio', key: 'audio', color: 'bg-green-500', icon: '🎧' },
-                                                    { name: 'Simplified', key: 'simplified', color: 'bg-yellow-500', icon: '📝' },
-                                                    { name: 'Chat', key: 'chat', color: 'bg-purple-500', icon: '💬' }
-                                                ];
-
-                                                return (
-                                                    <>
-                                                        {/* Horizontal stacked bar */}
-                                                        <div className="h-10 bg-gray-200 rounded-lg overflow-hidden flex shadow-sm mb-4">
-                                                            {tabs.map(tab => {
-                                                                const time = times[tab.key] || 0;
-                                                                const percent = (time / total * 100);
-                                                                return (
-                                                                    <div
-                                                                        key={tab.key}
-                                                                        className={`${tab.color} flex items-center justify-center text-white text-xs font-semibold transition-all`}
-                                                                        style={{ width: `${percent}%` }}
-                                                                        title={`${tab.name}: ${(time/1000/60).toFixed(1)}m`}
-                                                                    >
-                                                                        {percent > 10 ? `${tab.icon} ${percent.toFixed(0)}%` : ''}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-
-                                                        {/* Stats Grid */}
-                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                            {tabs.map(tab => {
-                                                                const time = times[tab.key] || 0;
-                                                                const percent = (time / total * 100).toFixed(1);
-                                                                return (
-                                                                    <div key={tab.key} className="p-3 bg-gray-50 rounded-lg text-center">
-                                                                        <div className="text-2xl mb-1">{tab.icon}</div>
-                                                                        <div className="font-semibold text-gray-800">{tab.name}</div>
-                                                                        <div className="text-lg font-bold" style={{color: tab.color.replace('bg-', '').includes('purple') ? '#9333ea' : tab.color.replace('bg-', '').includes('blue') ? '#3b82f6' : tab.color.replace('bg-', '').includes('green') ? '#22c55e' : '#eab308'}}>
-                                                                            {(time / 1000 / 60).toFixed(1)}m
-                                                                        </div>
-                                                                        <div className="text-xs text-gray-500">{percent}%</div>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </>
-                                                );
-                                            })()}
-                                        </div>
-                                    )}
-
                                     {/* Resources Availability */}
                                     {selectedExperiment.extendedResources?.resourcesAvailable && (
                                         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -559,10 +560,10 @@
                                                     🎧 Audio {selectedExperiment.extendedResources.resourcesAvailable.audio ? '✓' : '✗'}
                                                 </span>
                                                 <span className={`px-3 py-1 rounded-full text-sm ${
-                                                    selectedExperiment.extendedResources.resourcesAvailable.simplified
+                                                    selectedExperiment.extendedResources.resourcesAvailable.video
                                                         ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
                                                 }`}>
-                                                    📝 Simplified {selectedExperiment.extendedResources.resourcesAvailable.simplified ? '✓' : '✗'}
+                                                    🎬 Video {selectedExperiment.extendedResources.resourcesAvailable.video ? '✓' : '✗'}
                                                 </span>
                                             </div>
                                         </div>
@@ -621,6 +622,75 @@
                                                                         {event.eventType === 'audio_pause' && '⏸️ Pause'}
                                                                         {event.eventType === 'audio_seeked' && '⏩ Seek'}
                                                                         {event.eventType === 'audio_ended' && '🏁 Ended'}
+                                                                    </span>
+                                                                    <span className="text-gray-500">
+                                                                        {event.currentTime !== undefined && `@ ${event.currentTime.toFixed(1)}s`}
+                                                                    </span>
+                                                                    <span className="text-gray-400">
+                                                                        {new Date(event.timestamp).toLocaleTimeString()}
+                                                                    </span>
+                                                                </div>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Video Interactions */}
+                                    {(() => {
+                                        const videoEvents = selectedExperiment.events.filter(e =>
+                                            e.eventType === 'video_play' ||
+                                            e.eventType === 'video_pause' ||
+                                            e.eventType === 'video_ended' ||
+                                            e.eventType === 'video_seeked'
+                                        );
+
+                                        if (videoEvents.length === 0) return null;
+
+                                        const playCount = videoEvents.filter(e => e.eventType === 'video_play').length;
+                                        const pauseCount = videoEvents.filter(e => e.eventType === 'video_pause').length;
+                                        const endedCount = videoEvents.filter(e => e.eventType === 'video_ended').length;
+                                        const seekCount = videoEvents.filter(e => e.eventType === 'video_seeked').length;
+
+                                        return (
+                                            <div className="mb-6 p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
+                                                <h3 className="text-md font-semibold mb-3">🎬 Video Interactions</h3>
+                                                <div className="grid grid-cols-4 gap-4 text-center">
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-green-600">{playCount}</div>
+                                                        <div className="text-xs text-gray-600">Play</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-yellow-600">{pauseCount}</div>
+                                                        <div className="text-xs text-gray-600">Pause</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-blue-600">{seekCount}</div>
+                                                        <div className="text-xs text-gray-600">Seek</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-bold text-purple-600">{endedCount}</div>
+                                                        <div className="text-xs text-gray-600">Completed</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Video event timeline */}
+                                                <details className="mt-4">
+                                                    <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                                                        Show video event timeline ({videoEvents.length} events)
+                                                    </summary>
+                                                    <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                                                        {videoEvents
+                                                            .sort((a, b) => a.timestamp - b.timestamp)
+                                                            .map((event, idx) => (
+                                                                <div key={idx} className="p-2 bg-white rounded text-xs flex justify-between items-center">
+                                                                    <span className="font-medium">
+                                                                        {event.eventType === 'video_play' && '▶️ Play'}
+                                                                        {event.eventType === 'video_pause' && '⏸️ Pause'}
+                                                                        {event.eventType === 'video_seeked' && '⏩ Seek'}
+                                                                        {event.eventType === 'video_ended' && '🏁 Ended'}
                                                                     </span>
                                                                     <span className="text-gray-500">
                                                                         {event.currentTime !== undefined && `@ ${event.currentTime.toFixed(1)}s`}
@@ -1003,7 +1073,7 @@
                                                             );
                                                         })}
                                                         
-                                                        {/* LLM segments */}
+                                                        {/* LLM/Chat segments */}
                                                         {allEvents
                                                             .filter(e =>
                                                                 (e.eventType === 'tab_switch' && e.classification === 'llm') ||
@@ -1014,12 +1084,12 @@
                                                                 const eventSeconds = eventTime / 1000;
                                                                 const llmDuration = event.duration || event.llmDuration || event.timeOnPreviousTab || 0;
                                                                 const llmSeconds = llmDuration / 1000;
-                                                                
+
                                                                 const llmStartSeconds = eventSeconds - llmSeconds;
                                                                 const llmStartX = leftPadding + (llmStartSeconds / adjustedTotalSeconds) * timelineWidth;
                                                                 const llmEndX = leftPadding + (eventSeconds / adjustedTotalSeconds) * timelineWidth;
                                                                 const llmWidth = Math.max(2, (llmSeconds / adjustedTotalSeconds) * timelineWidth);
-                                                                
+
                                                                 return (
                                                                     <div key={`llm-${idx}`}>
                                                                         {/* LLM segment */}
@@ -1033,11 +1103,11 @@
                                                                             }}
                                                                         >
                                                                             <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-20">
-                                                                                <div><strong>🤖 LLM Usage</strong></div>
+                                                                                <div><strong>💬 Chat</strong></div>
                                                                                 <div>{(llmDuration / 1000).toFixed(2)}s</div>
                                                                             </div>
                                                                         </div>
-                                                                        
+
                                                                         {/* LLM marker */}
                                                                         <div
                                                                             className="absolute bottom-12 group cursor-pointer"
@@ -1046,14 +1116,14 @@
                                                                                 transform: 'translate(-50%, -50%)'
                                                                             }}
                                                                         >
-                                                                            <div 
+                                                                            <div
                                                                                 className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
                                                                                 style={{backgroundColor: '#8B5CF6'}}
                                                                             ></div>
-                                                                            
+
                                                                             {/* Tooltip */}
                                                                             <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-8 px-4 py-3 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-30 shadow-xl">
-                                                                                <div className="font-bold text-sm mb-2">🤖 LLM Usage</div>
+                                                                                <div className="font-bold text-sm mb-2">💬 Chat</div>
                                                                                 <div className="space-y-1">
                                                                                     <div><strong>Duration:</strong> {(llmDuration / 1000).toFixed(2)}s</div>
                                                                                     <div><strong>Time:</strong> {new Date(event.timestamp).toLocaleTimeString()}</div>
@@ -1064,7 +1134,83 @@
                                                                 );
                                                             })
                                                         }
-                                                        
+
+                                                        {/* Resource tab segments (extended condition) */}
+                                                        {allEvents
+                                                            .filter(e => e.eventType === 'resource_tab_switch')
+                                                            .map((event, idx) => {
+                                                                const eventTime = event.timestamp - adjustedStartTime;
+                                                                const eventSeconds = eventTime / 1000;
+                                                                const tabDuration = event.timeOnPreviousTab || 0;
+                                                                const tabSeconds = tabDuration / 1000;
+
+                                                                const tabStartSeconds = eventSeconds - tabSeconds;
+                                                                const tabStartX = leftPadding + (tabStartSeconds / adjustedTotalSeconds) * timelineWidth;
+                                                                const tabEndX = leftPadding + (eventSeconds / adjustedTotalSeconds) * timelineWidth;
+                                                                const tabWidth = Math.max(2, (tabSeconds / adjustedTotalSeconds) * timelineWidth);
+
+                                                                // Color map for different tabs
+                                                                const tabColorMap = {
+                                                                    chat: { bg: '#8B5CF6', label: '💬 Chat' },
+                                                                    audio: { bg: '#3B82F6', label: '🎧 Audio' },
+                                                                    video: { bg: '#EF4444', label: '🎬 Video' },
+                                                                    infographics: { bg: '#EAB308', label: '📊 Infographics' },
+                                                                    simplified: { bg: '#14B8A6', label: '📝 Simplified' }
+                                                                };
+
+                                                                const fromTab = event.from || 'unknown';
+                                                                const toTab = event.to || 'unknown';
+                                                                const tabInfo = tabColorMap[fromTab] || { bg: '#6B7280', label: fromTab };
+
+                                                                // Skip if from tab is chat (already handled by LLM segments)
+                                                                if (fromTab === 'chat') return null;
+
+                                                                return (
+                                                                    <div key={`tab-${idx}`}>
+                                                                        {/* Tab segment */}
+                                                                        <div
+                                                                            className="absolute bottom-12 h-2 opacity-80 group"
+                                                                            style={{
+                                                                                left: `${tabStartX}px`,
+                                                                                width: `${tabWidth}px`,
+                                                                                backgroundColor: tabInfo.bg,
+                                                                                borderRadius: '2px'
+                                                                            }}
+                                                                        >
+                                                                            <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-20">
+                                                                                <div><strong>{tabInfo.label}</strong></div>
+                                                                                <div>{(tabDuration / 1000).toFixed(2)}s</div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Tab marker */}
+                                                                        <div
+                                                                            className="absolute bottom-12 group cursor-pointer"
+                                                                            style={{
+                                                                                left: `${tabEndX}px`,
+                                                                                transform: 'translate(-50%, -50%)'
+                                                                            }}
+                                                                        >
+                                                                            <div
+                                                                                className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+                                                                                style={{backgroundColor: tabInfo.bg}}
+                                                                            ></div>
+
+                                                                            {/* Tooltip */}
+                                                                            <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-8 px-4 py-3 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-30 shadow-xl">
+                                                                                <div className="font-bold text-sm mb-2">{tabInfo.label}</div>
+                                                                                <div className="space-y-1">
+                                                                                    <div><strong>Duration:</strong> {(tabDuration / 1000).toFixed(2)}s</div>
+                                                                                    <div><strong>Switch:</strong> {fromTab} → {toTab}</div>
+                                                                                    <div><strong>Time:</strong> {new Date(event.timestamp).toLocaleTimeString()}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        }
+
                                                         {/* Legend */}
                                                         <div className="absolute top-4 right-4 space-y-1 text-xs bg-white p-2 rounded border shadow-sm">
                                                             <div className="flex items-center">
@@ -1079,14 +1225,36 @@
                                                                 <div className="w-3 h-3 bg-emerald-300 rounded mr-2"></div>
                                                                 <span>Scrolling</span>
                                                             </div>
-                                                            <div className="flex items-center">
-                                                                <div className="w-3 h-3 bg-purple-500 rounded mr-2"></div>
-                                                                <span>🤖 LLM</span>
-                                                            </div>
                                                             <div className="flex items-center pt-1 border-t">
                                                                 <div className="w-3 h-3 bg-gray-400 rounded mr-2"></div>
                                                                 <span>Scroll Motion</span>
                                                             </div>
+                                                            {(selectedExperiment.condition === 'with_llm' || selectedExperiment.condition === 'with_llm_extended') && (
+                                                                <div className="flex items-center pt-1 border-t">
+                                                                    <div className="w-3 h-3 rounded mr-2" style={{backgroundColor: '#8B5CF6'}}></div>
+                                                                    <span>💬 Chat</span>
+                                                                </div>
+                                                            )}
+                                                            {selectedExperiment.condition === 'with_llm_extended' && (
+                                                                <>
+                                                                    <div className="flex items-center">
+                                                                        <div className="w-3 h-3 rounded mr-2" style={{backgroundColor: '#3B82F6'}}></div>
+                                                                        <span>🎧 Audio</span>
+                                                                    </div>
+                                                                    <div className="flex items-center">
+                                                                        <div className="w-3 h-3 rounded mr-2" style={{backgroundColor: '#EF4444'}}></div>
+                                                                        <span>🎬 Video</span>
+                                                                    </div>
+                                                                    <div className="flex items-center">
+                                                                        <div className="w-3 h-3 rounded mr-2" style={{backgroundColor: '#EAB308'}}></div>
+                                                                        <span>📊 Infographics</span>
+                                                                    </div>
+                                                                    <div className="flex items-center">
+                                                                        <div className="w-3 h-3 rounded mr-2" style={{backgroundColor: '#14B8A6'}}></div>
+                                                                        <span>📝 Simplified</span>
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
@@ -1300,12 +1468,43 @@
                     </div>
 
                     <div className="max-w-7xl mx-auto px-6 py-6">
+                        {/* Condition Assignment Status */}
+                        <div className="bg-white rounded-lg shadow p-6 mb-6">
+                            <h2 className="text-lg font-bold mb-4">Condition Assignment Status</h2>
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-gray-500">
+                                    <div className="text-sm text-gray-600">Without LLM</div>
+                                    <div className="text-3xl font-bold text-gray-700">{conditionCounts.without_llm || 0}</div>
+                                </div>
+                                <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                                    <div className="text-sm text-gray-600">With LLM</div>
+                                    <div className="text-3xl font-bold text-purple-600">{conditionCounts.with_llm || 0}</div>
+                                </div>
+                                <div className="p-4 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+                                    <div className="text-sm text-gray-600">With LLM Extended</div>
+                                    <div className="text-3xl font-bold text-indigo-600">{conditionCounts.with_llm_extended || 0}</div>
+                                </div>
+                                <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                                    <div className="text-sm text-gray-600">Total Assigned</div>
+                                    <div className="text-3xl font-bold text-green-600">
+                                        {(conditionCounts.without_llm || 0) + (conditionCounts.with_llm || 0) + (conditionCounts.with_llm_extended || 0)}
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={loadConditionCounts}
+                                className="mt-4 text-sm text-blue-600 hover:text-blue-800"
+                            >
+                                Refresh counts
+                            </button>
+                        </div>
+
                         <div className="flex justify-between items-center mb-6">
                             <div className="text-lg font-semibold">
                                 Total: {experiments.length} experiments
                             </div>
                             <button
-                                onClick={loadExperiments}
+                                onClick={() => { loadExperiments(); loadConditionCounts(); }}
                                 disabled={loading}
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
                             >

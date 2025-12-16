@@ -66,7 +66,7 @@
 
                 const loadPreTaskData = async () => {
                     try {
-                        const experimentRef = db.collection('experiments').doc(experimentId);
+                        const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc(experimentId);
                         const doc = await experimentRef.get();
                         if (doc.exists && doc.data().preTask?.strategies) {
                             const strategies = doc.data().preTask.strategies;
@@ -142,13 +142,20 @@
                 };
 
                 try {
-                    // Save to experiments collection
-                    const experimentRef = db.collection('experiments').doc(experimentId);
-                    await experimentRef.update({
-                        postTask: postTaskData
-                    });
+                    if (!experimentId) {
+                        throw new Error('Missing experimentId');
+                    }
 
-                    console.log('Post-task saved');
+                    console.log('💾 Saving post-task to:', experimentId);
+                    console.log('💾 Data:', postTaskData);
+
+                    // Save to users/{participantId}/experiments/{experimentId}
+                    const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc(experimentId);
+                    await experimentRef.set({
+                        postTask: postTaskData
+                    }, { merge: true });
+
+                    console.log('✅ Post-task saved successfully');
 
                     // Navigate to post-study survey
                     const params = new URLSearchParams({

@@ -255,13 +255,22 @@
                 }
 
                 try {
-                    // Save survey data to experiments collection
-                    const experimentRef = db.collection('experiments').doc(experimentId);
-                    await experimentRef.update({
+                    if (!experimentId) {
+                        throw new Error('Missing experimentId');
+                    }
+
+                    console.log('💾 Saving post-study survey to:', experimentId);
+                    console.log('💾 Data:', surveyData);
+
+                    // Save survey data to users/{participantId}/experiments/{experimentId}
+                    const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc(experimentId);
+                    await experimentRef.set({
                         postStudySurvey: surveyData,
                         status: 'completed',
                         completedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    }, { merge: true });
+
+                    console.log('✅ Post-study survey saved');
 
                     // Update user status to completed
                     const userRef = db.collection('users').doc(participantId);
@@ -270,7 +279,7 @@
                         completedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
-                    console.log('Post-study survey saved, experiment completed');
+                    console.log('✅ User status updated to completed');
 
                     // Navigate to completion page
                     window.location.href = `complete.html?participantId=${participantId}`;
@@ -1043,9 +1052,6 @@
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
                                                 For what purposes do you use AI tools at work? *
                                             </label>
-                                            <p className="text-xs text-gray-600 mb-4">
-                                                Select all that apply. For each selected purpose, rate how useful and trustworthy you find AI.
-                                            </p>
 
                                             <div className="space-y-4">
                                                 {aiPurposeOptions.map(purpose => (

@@ -128,43 +128,43 @@
                             return;
                         }
 
-                        // Check if user has incomplete/failed attempt
-                        if (userData.status === 'in_progress' || userData.status === 'failed') {
-                            const confirmRestart = confirm(
-                                'You have a previous incomplete attempt. Would you like to start over?\n\n' +
-                                'Warning: Your previous data will not be used, but will be kept for records.'
-                            );
+                        // Check if user has a previous experiment
+                        if (userData.currentExperimentId) {
+                            const prevExpDoc = await db.collection('users').doc(participantId).collection('experiments').doc(userData.currentExperimentId).get();
 
-                            if (!confirmRestart) {
-                                setIsLoading(false);
-                                return;
-                            }
+                            if (prevExpDoc.exists) {
+                                const prevExpData = prevExpDoc.data();
 
-                            // Decrease count for previous condition if exists
-                            if (userData.currentExperimentId) {
-                                const prevExpDoc = await db.collection('experiments').doc(userData.currentExperimentId).get();
-                                if (prevExpDoc.exists) {
-                                    const prevCondition = prevExpDoc.data().condition;
-                                    if (prevCondition) {
-                                        const counterRef = db.collection('meta').doc('conditionCounts');
-                                        await db.runTransaction(async (transaction) => {
-                                            const counterDoc = await transaction.get(counterRef);
-                                            const counts = counterDoc.data() || {};
-                                            if (counts[prevCondition] > 0) {
-                                                transaction.set(counterRef, {
-                                                    ...counts,
-                                                    [prevCondition]: counts[prevCondition] - 1
-                                                }, { merge: true });
-                                            }
-                                        });
-                                    }
+                                // Check if reading has started (readingData exists)
+                                if (prevExpData.readingData) {
+                                    // Reading started - block re-participation
+                                    alert('You have already started the reading phase and cannot participate again. Thank you for your time!');
+                                    setIsLoading(false);
+                                    return;
+                                }
 
-                                    // Mark previous experiment as abandoned
-                                    await db.collection('experiments').doc(userData.currentExperimentId).update({
-                                        status: 'abandoned',
-                                        abandonedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                // Reading not started - allow restart
+                                // Decrease count for previous condition
+                                const prevCondition = prevExpData.condition;
+                                if (prevCondition) {
+                                    const counterRef = db.collection('meta').doc('conditionCounts');
+                                    await db.runTransaction(async (transaction) => {
+                                        const counterDoc = await transaction.get(counterRef);
+                                        const counts = counterDoc.data() || {};
+                                        if (counts[prevCondition] > 0) {
+                                            transaction.set(counterRef, {
+                                                ...counts,
+                                                [prevCondition]: counts[prevCondition] - 1
+                                            }, { merge: true });
+                                        }
                                     });
                                 }
+
+                                // Mark previous experiment as abandoned
+                                await db.collection('users').doc(participantId).collection('experiments').doc(userData.currentExperimentId).update({
+                                    status: 'abandoned',
+                                    abandonedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
                             }
                         }
                     }
@@ -181,8 +181,8 @@
                         assignedCondition = await assignCondition();
                     }
 
-                    // Step 3: Create new experiment document
-                    const experimentRef = db.collection('experiments').doc();
+                    // Step 3: Create new experiment document in users/{participantId}/experiments/{experimentId}
+                    const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc();
                     const experimentId = experimentRef.id;
 
                     await experimentRef.set({

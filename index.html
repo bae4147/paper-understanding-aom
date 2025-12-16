@@ -117,7 +117,7 @@
             const [experimentId, setExperimentId] = useState('');
             const [condition, setCondition] = useState('without_llm'); // without_llm, with_llm, with_llm_extended
             const [currentPaper, setCurrentPaper] = useState('mroz2018'); // Default paper
-            const [sessionId] = useState(`session_${Date.now()}`);
+            // Use experimentId as experimentId for consistent data storage
             const [showFinishPopup, setShowFinishPopup] = useState(false);
             const [showAiUsagePopup, setShowAiUsagePopup] = useState(false); // AI usage check popup for without_llm
             const [usedAiDuringReading, setUsedAiDuringReading] = useState(null); // null, 'yes', 'no'
@@ -133,12 +133,13 @@
             const [paperContent, setPaperContent] = useState('');
 
             // Focus state (for with_llm conditions)
-            const [activeFocus, setActiveFocus] = useState('reading'); // 'reading' or 'chat'
-            const [focusTimes, setFocusTimes] = useState({ reading: 0, chat: 0 });
+            // 'reading' = paper panel, 'chat' = LLM chat (condition 2), or for condition 3: 'chat'/'audio'/'infographics'/'simplified'/'video'/'quiz'
+            const [activeFocus, setActiveFocus] = useState('reading');
+            const [focusTimes, setFocusTimes] = useState({ reading: 0, chat: 0, audio: 0, infographics: 0, simplified: 0, video: 0, quiz: 0 });
             const focusStartTimeRef = useRef(Date.now());
 
             // Right panel tab state (for with_llm_extended)
-            const [activeTab, setActiveTab] = useState(null); // 'infographics', 'video', 'audio', 'simplified', 'chat' or null for initial state
+            const [activeTab, setActiveTab] = useState(null); // 'infographics', 'video', 'audio', 'simplified', 'chat', 'quiz' or null for initial state
 
             // Resource state for extended condition
             const [resourceContent, setResourceContent] = useState({
@@ -149,16 +150,6 @@
                 simplified: null
             });
 
-            // Resource usage tracking for extended condition
-            const tabStartTimeRef = useRef(Date.now());
-            const [tabUsageTimes, setTabUsageTimes] = useState({
-                infographics: 0,
-                video: 0,
-                audio: 0,
-                simplified: 0,
-                chat: 0,
-                quiz: 0
-            });
             const audioRef = useRef(null);
             const videoRef = useRef(null);
 
@@ -418,6 +409,42 @@
                 }
             }, []);
 
+            // Load paper content when currentPaper changes
+            useEffect(() => {
+                if (!currentPaper) return;
+
+                const paper = papers.find(p => p.id === currentPaper);
+                if (paper && paper.url) {
+                    fetch(paper.url)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const proseDiv = doc.querySelector('.prose');
+
+                            if (proseDiv) {
+                                setPaperContent(proseDiv.innerHTML);
+                            } else {
+                                setPaperContent('<p>Error: Could not load paper content</p>');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading paper:', error);
+                            setPaperContent('<p>Error loading paper.</p>');
+                        });
+
+                    // Load quiz questions
+                    fetch(`questions_data/${currentPaper}.json`)
+                        .then(res => res.ok ? res.json() : null)
+                        .then(data => {
+                            if (data && data.questions) {
+                                setQuizQuestions(data.questions);
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }, [currentPaper]);
+
             // Expose current phase to window for feedback widget
             useEffect(() => {
                 window.currentPhase = phase;
@@ -524,35 +551,35 @@
                 }
             }, [messages, isLoading]);
 
-            // Create experiment document
+            // Update experiment document (merge to preserve pre-task data)
             useEffect(() => {
-                const createExperimentDoc = async () => {
-                    if (phase === 'reading-guide' && participantId && sessionId && currentPaper) {
+                const updateExperimentDoc = async () => {
+                    if (phase === 'reading-guide' && participantId && experimentId && currentPaper) {
                         try {
                             if (window.firebaseDb) {
                                 const experimentRef = window.firebaseDoc(
                                     window.firebaseDb,
-                                    `users/${participantId}/experiments/${sessionId}`
+                                    `users/${participantId}/experiments/${experimentId}`
                                 );
 
+                                // Use merge: true to preserve existing data (like preTask)
                                 await window.firebaseSetDoc(experimentRef, {
                                     participantId,
-                                    sessionId,
+                                    experimentId,
                                     condition,
                                     paper: currentPaper,
-                                    startedAt: window.firebaseServerTimestamp(),
-                                    status: 'in_progress',
-                                    createdAt: Date.now()
-                                });
+                                    readingStartedAt: window.firebaseServerTimestamp(),
+                                    status: 'in_progress'
+                                }, { merge: true });
 
-                                console.log('✅ Experiment document created');
+                                console.log('✅ Experiment document updated (merged)');
                             }
                         } catch (error) {
-                            console.error('❌ Failed to create experiment document:', error);
+                            console.error('❌ Failed to update experiment document:', error);
                         }
                     }
                 };
-                createExperimentDoc();
+                updateExperimentDoc();
             }, [phase]);
 
             // Calculate section boundaries when entering reading phase
@@ -587,14 +614,14 @@
                 isSaving.current = true;
 
                 try {
-                    if (!window.firebaseDb || !participantId || !sessionId) {
+                    if (!window.firebaseDb || !participantId || !experimentId) {
                         isSaving.current = false;
                         return false;
                     }
 
                     const experimentRef = window.firebaseDoc(
                         window.firebaseDb,
-                        `users/${participantId}/experiments/${sessionId}`
+                        `users/${participantId}/experiments/${experimentId}`
                     );
 
                     const readingEvents = eventsBatch.filter(e =>
@@ -667,7 +694,7 @@
                 const timeSinceLast = now - lastEventTime.current;
 
                 eventIdCounter.current++;
-                const eventId = `${sessionId}_${eventIdCounter.current}`;
+                const eventId = `${experimentId}_${eventIdCounter.current}`;
 
                 const event = {
                     eventId,
@@ -676,7 +703,7 @@
                     phase,
                     timeSinceLast,
                     participantId,
-                    sessionId,
+                    experimentId,
                     condition,
                     paper: currentPaper,
                     ...additionalData
@@ -695,6 +722,27 @@
                     return newEvents;
                 });
                 lastEventTime.current = now;
+
+                // Console logging for debugging
+                if (eventType === 'scroll_action') {
+                    const cls = additionalData.classification || 'unknown';
+                    const pause = additionalData.pauseDuration || 0;
+                    const scroll = additionalData.scrollDuration || 0;
+                    const section = additionalData.sectionBeforeScroll || 'Unknown';
+                    console.log(`📊 [scroll_action] ${cls.toUpperCase()} | section: ${section} | pause: ${(pause/1000).toFixed(2)}s | scroll: ${(scroll/1000).toFixed(2)}s`);
+                } else if (eventType === 'llm_activity') {
+                    const cls = additionalData.classification || 'unknown';
+                    const dur = additionalData.duration || 0;
+                    console.log(`🤖 [llm_activity] ${cls} | duration: ${(dur/1000).toFixed(2)}s`);
+                } else if (eventType === 'focus_switch' || eventType === 'tab_switch') {
+                    console.log(`🔄 [${eventType}] ${additionalData.from || '?'} → ${additionalData.to || '?'}`);
+                } else if (eventType === 'resource_tab_switch') {
+                    console.log(`📑 [resource_tab_switch] ${additionalData.from || '?'} → ${additionalData.to || '?'} | time on prev: ${((additionalData.timeOnPreviousTab || 0)/1000).toFixed(2)}s`);
+                } else if (eventType.startsWith('audio_') || eventType.startsWith('video_')) {
+                    console.log(`🎵 [${eventType}] currentTime: ${additionalData.currentTime?.toFixed(1) || 0}s`);
+                } else {
+                    console.log(`📝 [${eventType}]`, additionalData);
+                }
 
                 // Local storage backup
                 const storedEvents = JSON.parse(localStorage.getItem('experimentEvents_aom') || '[]');
@@ -715,11 +763,17 @@
             };
 
             // Tab switching with time tracking
+            // For condition 3, newFocus can be: 'reading', 'chat', 'audio', 'infographics', 'simplified', 'video'
+            // For condition 2, newFocus is: 'reading' or 'chat'
             const switchFocus = (newFocus) => {
                 if (newFocus === activeFocus) return;
 
                 const now = Date.now();
+                const isRightPanel = (focus) => focus !== 'reading';
+                const wasOnRightPanel = isRightPanel(activeFocus);
+                const goingToRightPanel = isRightPanel(newFocus);
 
+                // If leaving chat tab, log LLM activity
                 if (activeFocus === 'chat') {
                     const activityDuration = now - lastTypingActivityRef.current;
                     const classification = isTypingRef.current ? 'typing' : 'none-typing';
@@ -738,7 +792,8 @@
                     isTypingRef.current = false;
                 }
 
-                if (newFocus === 'chat' && activeFocus === 'reading') {
+                // If moving from reading to right panel, log scroll_action for the reading segment
+                if (activeFocus === 'reading' && goingToRightPanel) {
                     const pauseDuration = now - lastActivityTimeRef.current;
                     let classification = pauseDuration > 5000 ? 'reading' : (pauseDuration > 2000 ? 'scanning' : 'scrolling');
 
@@ -753,18 +808,21 @@
                         timestamp: now
                     });
 
-                    lastTypingActivityRef.current = now;
-                    isTypingRef.current = false;
+                    if (newFocus === 'chat') {
+                        lastTypingActivityRef.current = now;
+                        isTypingRef.current = false;
+                    }
                 }
 
-                if (newFocus === 'reading' && activeFocus === 'chat') {
+                // If returning to reading from right panel, reset activity time
+                if (newFocus === 'reading' && wasOnRightPanel) {
                     lastActivityTimeRef.current = now;
                 }
 
                 const elapsed = Date.now() - focusStartTimeRef.current;
                 setFocusTimes(prev => ({
                     ...prev,
-                    [activeFocus]: prev[activeFocus] + elapsed
+                    [activeFocus]: (prev[activeFocus] || 0) + elapsed
                 }));
 
                 logEvent('focus_switch', {
@@ -775,30 +833,39 @@
 
                 setActiveFocus(newFocus);
                 focusStartTimeRef.current = Date.now();
+
+                // For extended condition: sync activeTab with activeFocus when entering right panel
+                if (condition === 'with_llm_extended' && goingToRightPanel && !wasOnRightPanel) {
+                    if (activeTab === null) {
+                        setActiveTab(newFocus);
+                    }
+                }
             };
 
             // Handle resource tab switch (for extended condition)
+            // This is called when user clicks a tab within the right panel
             const handleTabSwitch = (newTab) => {
                 if (newTab === activeTab) return;
                 if (tabLoading[newTab]) return; // Don't switch if already loading
 
                 const now = Date.now();
-                const timeOnPreviousTab = now - tabStartTimeRef.current;
-
-                // Update accumulated time for previous tab
-                setTabUsageTimes(prev => ({
-                    ...prev,
-                    [activeTab]: prev[activeTab] + timeOnPreviousTab
-                }));
 
                 logEvent('resource_tab_switch', {
                     from: activeTab,
                     to: newTab,
-                    timeOnPreviousTab,
                     timestamp: now
                 });
 
-                tabStartTimeRef.current = now;
+                // Update focusTimes for the previous focus
+                if (condition === 'with_llm_extended') {
+                    const elapsed = now - focusStartTimeRef.current;
+                    setFocusTimes(prev => ({
+                        ...prev,
+                        [activeFocus]: (prev[activeFocus] || 0) + elapsed
+                    }));
+                    setActiveFocus(newTab);
+                    focusStartTimeRef.current = now;
+                }
 
                 // If first time clicking this tab, show fake loading for 2 seconds (except chat)
                 if (!tabLoaded[newTab] && newTab !== 'chat') {
@@ -948,10 +1015,6 @@
                     isScrollingRef.current = true;
                     scrollStartTimeRef.current = now;
                     sectionBeforeScrollRef.current = currentSection;
-
-                    if (lastActivityTimeRef.current === 0) {
-                        lastActivityTimeRef.current = now;
-                    }
                 }
 
                 if (scrollTimeoutRef.current) {
@@ -1308,12 +1371,12 @@ Use markdown formatting for better readability:
 
                     eventIdCounter.current++;
                     finalEvent = {
-                        eventId: `${sessionId}_${eventIdCounter.current}`,
+                        eventId: `${experimentId}_${eventIdCounter.current}`,
                         timestamp: now,
                         eventType: 'scroll_action',
                         phase: 'reading',
                         participantId,
-                        sessionId,
+                        experimentId,
                         condition,
                         paper: currentPaper,
                         scrollY: pdfContainerRef.current?.scrollTop || 0,
@@ -1362,10 +1425,10 @@ Use markdown formatting for better readability:
 
                 // Save to Firebase
                 try {
-                    if (window.firebaseDb && participantId && sessionId) {
+                    if (window.firebaseDb && participantId && experimentId) {
                         const experimentRef = window.firebaseDoc(
                             window.firebaseDb,
-                            `users/${participantId}/experiments/${sessionId}`
+                            `users/${participantId}/experiments/${experimentId}`
                         );
 
                         let readingEvents = events.filter(e =>
@@ -1398,14 +1461,6 @@ Use markdown formatting for better readability:
 
                         // Save extended condition data
                         if (condition === 'with_llm_extended') {
-                            // Calculate final tab usage time
-                            const finalTabTime = Date.now() - tabStartTimeRef.current;
-                            const finalTabUsageTimes = {
-                                ...tabUsageTimes,
-                                [activeTab]: tabUsageTimes[activeTab] + finalTabTime
-                            };
-
-                            updateData['extendedResources.tabUsageTimes'] = finalTabUsageTimes;
                             updateData['extendedResources.resourcesAvailable'] = {
                                 infographics: !!resourceContent.infographics,
                                 video: !!resourceContent.video,
@@ -1448,6 +1503,7 @@ Use markdown formatting for better readability:
                     console.error('❌ Failed to save reading data:', error);
                 }
 
+                setShowFinishPopup(false);  // Reset popup state
                 setPhase('quiz-guide');
                 logEvent('quiz_guide_shown');
             };
@@ -1501,10 +1557,10 @@ Use markdown formatting for better readability:
                 setIsRedirecting(true);
 
                 try {
-                    if (window.firebaseDb && participantId && sessionId) {
+                    if (window.firebaseDb && participantId && experimentId) {
                         const experimentRef = window.firebaseDoc(
                             window.firebaseDb,
-                            `users/${participantId}/experiments/${sessionId}`
+                            `users/${participantId}/experiments/${experimentId}`
                         );
 
                         await window.firebaseUpdateDoc(experimentRef, {
@@ -1552,10 +1608,10 @@ Use markdown formatting for better readability:
                 logEvent('review_phase_complete', { reviewData, duration: reviewDuration });
 
                 try {
-                    if (window.firebaseDb && participantId && sessionId) {
+                    if (window.firebaseDb && participantId && experimentId) {
                         const experimentRef = window.firebaseDoc(
                             window.firebaseDb,
-                            `users/${participantId}/experiments/${sessionId}`
+                            `users/${participantId}/experiments/${experimentId}`
                         );
 
                         await window.firebaseUpdateDoc(experimentRef, {
@@ -1593,10 +1649,10 @@ Use markdown formatting for better readability:
                 setEvents([]);
                 setActiveTab(null);
                 setResourceContent({ infographics: null, video: null, audio: null, audioType: null, simplified: null });
-                setTabUsageTimes({ infographics: 0, video: 0, audio: 0, simplified: 0, chat: 0 });
+                setFocusTimes({ reading: 0, chat: 0, audio: 0, infographics: 0, simplified: 0, video: 0, quiz: 0 });
                 eventIdCounter.current = 0;
                 unsavedEventsCount.current = 0;
-                tabStartTimeRef.current = Date.now();
+                focusStartTimeRef.current = Date.now();
             };
 
             // ============ RENDER PHASES ============
@@ -1730,8 +1786,10 @@ Use markdown formatting for better readability:
                                 onClick={() => {
                                     setPhase('reading');
                                     setReadingActive(true);
-                                    phaseStartTime.current = Date.now();
-                                    lastActivityTimeRef.current = Date.now();
+                                    const now = Date.now();
+                                    phaseStartTime.current = now;
+                                    lastActivityTimeRef.current = now;
+                                    focusStartTimeRef.current = now;
                                     logEvent('reading_started');
                                 }}
                                 disabled={condition === 'without_llm' && !noAiAgreed}
@@ -1984,9 +2042,9 @@ Use markdown formatting for better readability:
                             {showRightPanel && (
                                 <div
                                     className={`w-1/2 bg-white flex flex-col overflow-hidden transition-all ${
-                                        activeFocus === 'chat' ? 'border-4 border-purple-500' : 'border-4 border-transparent'
+                                        activeFocus !== 'reading' ? 'border-4 border-purple-500' : 'border-4 border-transparent'
                                     }`}
-                                    onMouseEnter={() => switchFocus('chat')}
+                                    onMouseEnter={() => switchFocus(condition === 'with_llm_extended' ? (activeTab || 'chat') : 'chat')}
                                 >
                                     {condition === 'with_llm_extended' ? (
                                         // Extended condition with tabs
@@ -2329,7 +2387,20 @@ Use markdown formatting for better readability:
                                     onComplete={() => alert('Quiz time is up!')}
                                 />
                                 <button
-                                    onClick={() => setShowFinishPopup(true)}
+                                    onClick={() => {
+                                        // Check if all questions are answered
+                                        const answeredCount = Object.keys(quizAnswers).length;
+                                        if (answeredCount < quizQuestions.length) {
+                                            alert(`Please answer all questions before submitting. (${answeredCount}/${quizQuestions.length} answered)`);
+                                            return;
+                                        }
+                                        // Check if confidence is rated
+                                        if (!quizConfidence) {
+                                            alert('Please rate your confidence in your quiz answers.');
+                                            return;
+                                        }
+                                        setShowFinishPopup(true);
+                                    }}
                                     className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                                 >
                                     Submit Quiz
