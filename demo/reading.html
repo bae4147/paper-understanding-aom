@@ -298,8 +298,10 @@
                 if (cond) setCondition(cond);
                 setCurrentPaper(paperId);
 
-                // Load paper content
-                const paper = papers.find(p => p.id === paperId);
+                // Load paper content - use AVAILABLE_PAPERS directly from global scope
+                const availablePapers = typeof AVAILABLE_PAPERS !== 'undefined' ? AVAILABLE_PAPERS : [];
+                const paper = availablePapers.find(p => p.id === paperId);
+
                 if (paper && paper.url) {
                     const paperUrl = '../' + paper.url;
                     fetch(paperUrl)
@@ -311,12 +313,12 @@
                             if (proseDiv) {
                                 setPaperContent(proseDiv.innerHTML);
                             } else {
-                                setPaperContent('<p>Error: Could not load paper content</p>');
+                                setPaperContent('<p>Error: Could not find .prose element in paper</p>');
                             }
                         })
                         .catch(error => {
                             console.error('Error loading paper:', error);
-                            setPaperContent('<p>Error loading paper.</p>');
+                            setPaperContent('<p>Error loading paper: ' + error.message + '</p>');
                         });
 
                     // Load quiz questions
@@ -328,6 +330,9 @@
                             }
                         })
                         .catch(() => {});
+                } else {
+                    console.error('Paper not found:', paperId, 'Available papers:', availablePapers);
+                    setPaperContent('<p>Error: Paper not found. Available: ' + availablePapers.map(p => p.id).join(', ') + '</p>');
                 }
 
                 // Auto-start to reading-guide phase
@@ -1634,7 +1639,7 @@ Use markdown formatting for better readability:
                                     onMouseUp={handleTextSelection}
                                     className="flex-1 overflow-y-auto p-8"
                                 >
-                                    <div className="w-full max-w-[900px] mx-auto p-12">
+                                    <div className="w-full max-w-[900px] mx-auto p-4">
                                         <div
                                             id="paper-content"
                                             className="prose max-w-none"
