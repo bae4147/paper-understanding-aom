@@ -173,7 +173,7 @@
 
             // Random tab order (shuffle content tabs, chat always at end)
             const [tabOrder] = useState(() => {
-                const shuffleTabs = ['video', 'audio', 'infographics', 'quiz'];
+                const shuffleTabs = ['video', 'audio', 'infographics'];
                 // Fisher-Yates shuffle
                 for (let i = shuffleTabs.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -1729,24 +1729,6 @@ Use markdown formatting for better readability:
                             </div>
 
                             <div className="space-y-6 mb-8">
-                                {/* Condition notice for with_llm conditions */}
-                                {(condition === 'with_llm' || condition === 'with_llm_extended') && (
-                                    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6">
-                                        <h3 className="font-bold text-lg text-green-800">
-                                            ✓ Your condition: Read with AI Chatbots
-                                        </h3>
-                                    </div>
-                                )}
-
-                                {/* Condition notice for without_llm - just the title, not the warning */}
-                                {condition === 'without_llm' && (
-                                    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6">
-                                        <h3 className="font-bold text-lg text-green-800">
-                                            ✓ Your condition: Read without AI support
-                                        </h3>
-                                    </div>
-                                )}
-
                                 <div className="bg-gray-50 rounded-lg p-6">
                                     <h3 className="font-bold text-lg text-gray-800 mb-2">Title</h3>
                                     <p className="text-gray-700">{paper?.name}</p>
@@ -2062,7 +2044,6 @@ Use markdown formatting for better readability:
                                                     audio: { icon: '🎧', label: 'Audio Overview', activeClass: 'bg-purple-50 border-purple-400 text-purple-700', iconClass: 'text-purple-600' },
                                                     infographics: { icon: '🗺️', label: 'Infographic', activeClass: 'bg-indigo-50 border-indigo-400 text-indigo-700', iconClass: 'text-indigo-600' },
                                                     simplified: { icon: '📝', label: 'Summary Text', activeClass: 'bg-amber-50 border-amber-400 text-amber-700', iconClass: 'text-amber-600' },
-                                                    quiz: { icon: '❓', label: 'Quiz', activeClass: 'bg-rose-50 border-rose-400 text-rose-700', iconClass: 'text-rose-600' },
                                                     chat: { icon: '💬', label: 'AI Chatbot', activeClass: 'bg-blue-50 border-blue-400 text-blue-700', iconClass: 'text-blue-600' }
                                                 };
                                                 return (
@@ -2140,77 +2121,6 @@ Use markdown formatting for better readability:
                                                 {activeTab === 'video' && !tabLoading['video'] && videoTab}
                                                 {activeTab === 'audio' && !tabLoading['audio'] && audioTab}
                                                 {activeTab === 'simplified' && !tabLoading['simplified'] && simplifiedTab}
-                                                {activeTab === 'quiz' && !tabLoading['quiz'] && (
-                                                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                                                        <div className="max-w-2xl mx-auto">
-                                                            <div className="mb-6">
-                                                                <h3 className="text-lg font-semibold text-gray-800 mb-2">Quick Comprehension Check</h3>
-                                                                <p className="text-sm text-gray-600">Test your understanding of the article with these questions.</p>
-                                                            </div>
-                                                            <div className="space-y-6">
-                                                                {inTabQuizQuestions.map((q, idx) => {
-                                                                    const userAnswer = inTabQuizAnswers[q.id];
-                                                                    const isAnswered = !!userAnswer;
-                                                                    const isCorrect = userAnswer === q.correctAnswer;
-                                                                    return (
-                                                                    <div key={q.id} className={`bg-white rounded-lg border p-4 ${
-                                                                        isAnswered ? (isCorrect ? 'border-green-400' : 'border-red-400') : 'border-gray-200'
-                                                                    }`}>
-                                                                        <p className="font-medium text-gray-800 mb-3">
-                                                                            {idx + 1}. {q.question}
-                                                                        </p>
-                                                                        <div className="space-y-2">
-                                                                            {q.options.map((option, optIdx) => {
-                                                                                const isSelected = userAnswer === option;
-                                                                                const isCorrectOption = option === q.correctAnswer;
-                                                                                let optionClass = 'border-gray-200 hover:bg-gray-50';
-                                                                                if (isAnswered) {
-                                                                                    if (isCorrectOption) {
-                                                                                        optionClass = 'border-green-400 bg-green-50';
-                                                                                    } else if (isSelected && !isCorrect) {
-                                                                                        optionClass = 'border-red-400 bg-red-50';
-                                                                                    }
-                                                                                } else if (isSelected) {
-                                                                                    optionClass = 'border-rose-400 bg-rose-50';
-                                                                                }
-                                                                                return (
-                                                                                <label
-                                                                                    key={optIdx}
-                                                                                    className={`flex items-center p-3 rounded-lg border transition-colors ${optionClass} ${isAnswered ? 'cursor-default' : 'cursor-pointer'}`}
-                                                                                >
-                                                                                    <input
-                                                                                        type="radio"
-                                                                                        name={q.id}
-                                                                                        value={option}
-                                                                                        checked={isSelected}
-                                                                                        disabled={isAnswered}
-                                                                                        onChange={() => {
-                                                                                            setInTabQuizAnswers(prev => ({ ...prev, [q.id]: option }));
-                                                                                            logEvent('in_tab_quiz_answer', {
-                                                                                                questionId: q.id,
-                                                                                                answer: option,
-                                                                                                isCorrect: option === q.correctAnswer
-                                                                                            });
-                                                                                        }}
-                                                                                        className="w-4 h-4 text-rose-600 mr-3"
-                                                                                    />
-                                                                                    <span className={`text-sm ${isAnswered && isCorrectOption ? 'text-green-700 font-medium' : 'text-gray-700'}`}>{option}</span>
-                                                                                    {isAnswered && isCorrectOption && <span className="ml-2 text-green-600">✓</span>}
-                                                                                    {isAnswered && isSelected && !isCorrect && <span className="ml-2 text-red-600">✗</span>}
-                                                                                </label>
-                                                                            );})}
-                                                                        </div>
-                                                                        {isAnswered && (
-                                                                            <div className={`mt-3 p-2 rounded text-sm ${isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                                                {isCorrect ? '✓ Correct!' : '✗ Incorrect. The correct answer is highlighted above.'}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                );})}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
                                                 {activeTab === 'chat' && !tabLoading['chat'] && chatUI}
                                             </div>
                                         </>
@@ -2719,7 +2629,5 @@ Use markdown formatting for better readability:
         ReactDOM.render(<ReadingExperimentAOM />, document.getElementById('root'));
     </script>
 
-    <!-- Feedback Widget -->
-    <script src="feedback-widget.js"></script>
 </body>
 </html>

@@ -141,7 +141,7 @@
             const [yearsInJob, setYearsInJob] = useState('');
             const [jobTitle, setJobTitle] = useState('');
             const [industry, setIndustry] = useState('');
-            const [ethnicity, setEthnicity] = useState('');
+            const [ethnicity, setEthnicity] = useState([]);
             const [education, setEducation] = useState('');
             const [englishProficiency, setEnglishProficiency] = useState('');
 
@@ -162,7 +162,7 @@
                     !criticalOwnIdeas || !criticalAlternativePerspectives || !criticalVerifyCredibility || !criticalQuestionClaims || !criticalBroaderImplications ||
                     !llmFrequency ||
                     !age || !gender || !workingSituation || !workHoursPerWeek || !yearsInOrganization || !yearsInJob ||
-                    !jobTitle || !industry || !ethnicity || !education || !englishProficiency) {
+                    !jobTitle || !industry || ethnicity.length === 0 || !education || !englishProficiency) {
                     alert('Please complete all required fields.');
                     return;
                 }
@@ -401,33 +401,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Performance: How successful were you in understanding the article?*
-                                            </label>
-                                            <div className="flex items-center justify-between mt-3">
-                                                <span className="text-xs text-gray-500">Excellent</span>
-                                                <div className="flex space-x-1">
-                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
-                                                        <button
-                                                            key={value}
-                                                            type="button"
-                                                            onClick={() => setPerformance(value.toString())}
-                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
-                                                                performance === value.toString()
-                                                                    ? 'bg-blue-600 text-white'
-                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        >
-                                                            {value}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <span className="text-xs text-gray-500">Poor</span>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                Effort: How hard did you have to work to read and understand the article?*
+                                                Effort: How much effort did you need to put in to read and understand the article?*
                                             </label>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-xs text-gray-500">Very Low</span>
@@ -483,9 +457,39 @@
                                 <div className="border-b pb-6">
                                     <h2 className="text-xl font-bold text-gray-800 mb-4">Section 2. Self-efficacy</h2>
 
+                                    {/* Performance - moved from NASA-TLX */}
+                                    <div className="mb-8">
+                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">1. Performance</h3>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                How successful were you in understanding the article? *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Poor</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5, 6, 7].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setPerformance(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                performance === value.toString()
+                                                                    ? 'bg-blue-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Excellent</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Overall Article Comprehension */}
                                     <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">1. Overall Article Comprehension</h3>
+                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">2. Reading Comprehension</h3>
                                         <p className="text-sm text-gray-600 mb-4">Please rate your understanding of the article you just read.</p>
 
                                         <div className="space-y-8">
@@ -571,7 +575,7 @@
 
                                     {/* Critical Engagement with the Article */}
                                     <div className="mt-8">
-                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">2. Critical Engagement with the Article</h3>
+                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">3. Critical Engagement</h3>
                                         <p className="text-sm text-gray-600 mb-4">Please rate your agreement with the following statements.</p>
 
                                         <div className="space-y-8">
@@ -711,13 +715,18 @@
                                 {/* Section 3: LLM Usefulness (only for with_llm conditions) */}
                                 {isWithLLM && (
                                     <div className="border-b pb-6">
-                                        <h2 className="text-xl font-bold text-gray-800 mb-2">Section 3. LLM Usefulness</h2>
-                                        <p className="text-sm text-gray-600 mb-4">Please rate your experience using the LLM during the task.</p>
+                                        <h2 className="text-xl font-bold text-gray-800 mb-2">Section 3. Usefulness of GenAI</h2>
+                                        <p className="text-sm text-gray-600 mb-2">Please rate your experience during the task.</p>
+                                        <p className="text-sm text-gray-600 mb-4">
+                                            {condition === 'with_llm_extended'
+                                                ? <span>* <strong className="text-gray-800">GenAI</strong> refers to the AI Chatbot, Video Overview, Audio Overview, and Infographic provided during the reading task.</span>
+                                                : <span>* <strong className="text-gray-800">GenAI</strong> refers to the AI Chatbot assistance provided during the reading task.</span>}
+                                        </p>
 
                                         <div className="space-y-8">
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    Overall, how useful was the LLM for reading and understanding the article?*
+                                                    How useful was the GenAI for reading and understanding the article?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all useful</span>
@@ -743,7 +752,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How helpful was the LLM for understanding difficult concepts or terminology?*
+                                                    How helpful was the GenAI for understanding difficult concepts or terminology?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -769,7 +778,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How helpful was the LLM for understanding the research findings?*
+                                                    How helpful was the GenAI for understanding the research findings?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -795,7 +804,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How helpful was the LLM for understanding practical applications?*
+                                                    How helpful was the GenAI for understanding practical applications?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -821,7 +830,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    How much did the LLM help you save time?*
+                                                    How helpful was the GenAI for saving your time?*
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Not at all helpful</span>
@@ -851,13 +860,18 @@
                                 {/* Section 4: LLM Trust (only for with_llm conditions) */}
                                 {isWithLLM && (
                                     <div className="border-b pb-6">
-                                        <h2 className="text-xl font-bold text-gray-800 mb-2">Section 4. LLM Trust</h2>
-                                        <p className="text-sm text-gray-600 mb-4">Please rate your trust in the LLM.</p>
+                                        <h2 className="text-xl font-bold text-gray-800 mb-2">Section 4. Trust in GenAI</h2>
+                                        <p className="text-sm text-gray-600 mb-2">Please rate your experience during the task.</p>
+                                        <p className="text-sm text-gray-600 mb-4">
+                                            {condition === 'with_llm_extended'
+                                                ? <span>* <strong className="text-gray-800">GenAI</strong> refers to the AI Chatbot, Video Overview, Audio Overview, and Infographic provided during the reading session.</span>
+                                                : <span>* <strong className="text-gray-800">GenAI</strong> refers to the AI Chatbot assistance provided during the reading session.</span>}
+                                        </p>
 
                                         <div className="space-y-8">
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    Overall, the LLM was competent and effective as a tool for assisting with reading. *
+                                                    Overall, the GenAI was competent and effective as a tool for assisting with reading. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -883,7 +897,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    The information provided by the LLM was accurate. *
+                                                    The information provided by the GenAI was accurate. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -909,7 +923,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I believe the LLM is made with my best interests in mind. *
+                                                    I believe the GenAI is made with my best interests in mind. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -935,7 +949,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I can always rely on the LLM when understanding articles. *
+                                                    I can always rely on the GenAI when understanding articles. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -961,7 +975,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I have no reservations about acting on the information provided by the LLM. *
+                                                    I have no reservations about acting on the information provided by the GenAI. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -987,7 +1001,7 @@
 
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                    I have no hesitation in using the information provided by the LLM. *
+                                                    I have no hesitation in using the information provided by the GenAI. *
                                                 </label>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span className="text-xs text-gray-500">Strongly disagree</span>
@@ -1016,8 +1030,8 @@
 
                                 {/* AI Usage Section */}
                                 <div className="border-b pb-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-2">{isWithLLM ? 'Section 5' : 'Section 3'}. AI Usage</h2>
-                                    <p className="text-sm text-gray-600 mb-4">Please tell us about your general AI usage at work. AI refers to Artificial Intelligence.</p>
+                                    <h2 className="text-xl font-bold text-gray-800 mb-2">{isWithLLM ? 'Section 5' : 'Section 3'}. Everyday GenAI Usage</h2>
+                                    <p className="text-sm text-gray-600 mb-4">Please tell us about your GenAI usage at work.</p>
                                     <div className="space-y-6">
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
@@ -1097,7 +1111,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                What AI tools (e.g., ChatGPT, Claude, Gemini) do you use at work? (Optional)
+                                                What GenAI tools (e.g., ChatGPT, Claude, Gemini) do you use at work? (Optional)
                                             </label>
                                             <p className="text-xs text-gray-600 mb-2">AI refers to Artificial Intelligence</p>
                                             <textarea
@@ -1127,7 +1141,6 @@
                                                 onChange={(e) => setAge(e.target.value)}
                                                 className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                                 placeholder="e.g., 35"
-                                                min="18"
                                                 max="100"
                                                 required
                                             />
@@ -1142,7 +1155,8 @@
                                                     { value: 'male', label: 'Male' },
                                                     { value: 'female', label: 'Female' },
                                                     { value: 'non-binary', label: 'Non-binary' },
-                                                    { value: 'other', label: 'Other' }
+                                                    { value: 'other', label: 'Other' },
+                                                    { value: 'prefer-not-to-say', label: 'Prefer not to say' }
                                                 ].map(option => (
                                                     <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                                                         <input
@@ -1262,7 +1276,7 @@
 
                                         <div>
                                             <label className="block text-sm font-bold text-gray-800 mb-2">
-                                                9. What is your race/ethnicity? *
+                                                9. What is your race/ethnicity? (You may select more than one.) *
                                             </label>
                                             <div className="space-y-2">
                                                 {[
@@ -1278,11 +1292,16 @@
                                                 ].map(option => (
                                                     <label key={option.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                                                         <input
-                                                            type="radio"
-                                                            name="ethnicity"
+                                                            type="checkbox"
                                                             value={option.value}
-                                                            checked={ethnicity === option.value}
-                                                            onChange={(e) => setEthnicity(e.target.value)}
+                                                            checked={ethnicity.includes(option.value)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setEthnicity(prev => [...prev, option.value]);
+                                                                } else {
+                                                                    setEthnicity(prev => prev.filter(v => v !== option.value));
+                                                                }
+                                                            }}
                                                             className="w-4 h-4"
                                                         />
                                                         <span className="text-sm text-gray-700">{option.label}</span>
@@ -1351,7 +1370,7 @@
                                     <h2 className="text-xl font-bold text-gray-800 mb-4">Study Feedback (Optional)</h2>
                                     <div>
                                         <label className="block text-sm font-bold text-gray-800 mb-2">
-                                            Do you have any feedback about this study? (e.g., any problem, confusion, or issue)
+                                            Do you have any feedback about this study?
                                         </label>
                                         <textarea
                                             value={studyFeedback}
@@ -1393,7 +1412,5 @@
         ReactDOM.render(<PostStudySurvey />, document.getElementById('root'));
     </script>
 
-    <!-- Feedback Widget -->
-    <script src="feedback-widget.js"></script>
 </body>
 </html>

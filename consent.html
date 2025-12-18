@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Experiment - Consent</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyClsZXLxKOXjUtB5loTfz0__GpJ8AQYEas",
+            authDomain: "aom-paper-understanding.firebaseapp.com",
+            projectId: "aom-paper-understanding",
+            storageBucket: "aom-paper-understanding.firebasestorage.app",
+            messagingSenderId: "668607386746",
+            appId: "1:668607386746:web:dc6711c596542fe1b217c3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function Consent() {
+            const [participantId, setParticipantId] = useState('');
+            const [mode, setMode] = useState('experiment');
+            const [condition, setCondition] = useState('');
+            const [paper, setPaper] = useState('');
+            const [audioAvailable, setAudioAvailable] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
+
+            // Consent selection (null = not selected, true = agree, false = disagree)
+            const [consentGiven, setConsentGiven] = useState(null);
+
+            // Get parameters from URL
+            useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                setParticipantId(urlParams.get('participantId') || '');
+                setMode(urlParams.get('mode') || 'experiment');
+                setCondition(urlParams.get('condition') || '');
+                setPaper(urlParams.get('paper') || 'mroz2018');
+                setAudioAvailable(urlParams.get('audioAvailable') === 'true');
+            }, []);
+
+            // Assign condition using Firebase transaction (for experiment mode)
+            const assignCondition = async () => {
+                const counterRef = db.collection('meta').doc('conditionCounts');
+
+                const assignedCondition = await db.runTransaction(async (transaction) => {
+                    const doc = await transaction.get(counterRef);
+                    const counts = doc.data() || {
+                        without_llm: 0,
+                        with_llm: 0,
+                        with_llm_extended: 0
+                    };
+
+                    // Determine which conditions are available based on audio
+                    const availableConditions = audioAvailable
+                        ? ['without_llm', 'with_llm', 'with_llm_extended']
+                        : ['without_llm', 'with_llm'];
+
+                    // Find condition with minimum count among available ones
+                    let minCondition = availableConditions[0];
+                    let minCount = counts[minCondition] || 0;
+
+                    for (const cond of availableConditions) {
+                        const count = counts[cond] || 0;
+                        if (count < minCount) {
+                            minCount = count;
+                            minCondition = cond;
+                        }
+                    }
+
+                    // Update count for assigned condition
+                    transaction.set(counterRef, {
+                        ...counts,
+                        [minCondition]: (counts[minCondition] || 0) + 1
+                    }, { merge: true });
+
+                    return minCondition;
+                });
+
+                return assignedCondition;
+            };
+
+            const handleSubmit = async () => {
+                if (!consentGiven) {
+                    alert('Please check the consent box to continue.');
+                    return;
+                }
+
+                setIsLoading(true);
+
+                try {
+                    // Step 1: Assign condition (deferred from landing page)
+                    let assignedCondition;
+                    if (mode === 'test' && condition) {
+                        assignedCondition = condition;
+                    } else {
+                        assignedCondition = await assignCondition();
+                    }
+
+                    // Step 2: Create new experiment document
+                    const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc();
+                    const experimentId = experimentRef.id;
+
+                    await experimentRef.set({
+                        participantId,
+                        condition: assignedCondition,
+                        paper,
+                        mode,
+                        audioAvailable,
+                        consent: {
+                            given: true,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        },
+                        status: 'in_progress',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    // Step 3: Update user document
+                    const userRef = db.collection('users').doc(participantId);
+                    await userRef.set({
+                        participantId,
+                        status: 'in_progress',
+                        currentExperimentId: experimentId,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    // Navigate to pre-task
+                    window.location.href = `pre-task.html?participantId=${participantId}&experimentId=${experimentId}&mode=${mode}&condition=${assignedCondition}&paper=${paper}`;
+
+                } catch (error) {
+                    console.error('Error saving consent:', error);
+                    alert('Failed to save. Please try again.');
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+                    <div className="max-w-3xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-2xl p-8">
+
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <h1 className="text-2xl font-bold text-gray-800">Consent to Participate in Research</h1>
+                            </div>
+
+                            {/* Consent Form Content */}
+                            <div className="mb-8 space-y-6 text-sm text-gray-700">
+                                <p>
+                                    We appreciate your assistance with this research. Please carefully read the following details regarding your participation in the study. This is a consent form for research participation and contains important information about the study and what to expect if you decide to participate.
+                                </p>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Purpose:</h2>
+                                    <p>
+                                        This study is being conducted for academic research and aims to contribute to scholarly knowledge. The purpose of this research is to better understand the psychological and behavioral dynamics associated with technology in professional settings.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Your participation is voluntary.</h2>
+                                    <p>
+                                        Participation in this study is entirely voluntary. You may choose not to participate without any penalty or loss of benefits to which you are otherwise entitled. You may also skip any questions you do not wish to answer.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Eligibility.</h2>
+                                    <p>
+                                        You must be 18 years of age or older and work full-time (32+ hours per week).
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Procedures/Tasks:</h2>
+                                    <p>
+                                        Participants will complete a series of tasks such as reading an article and taking quiz. After completing the tasks, participants will answer questions regarding their experiences, psychological states, and demographic information.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Risks and Benefits:</h2>
+                                    <p>
+                                        This study involves minimal risk. You will not be asked to provide any sensitive or identifiable information. The main risks are related to the potential for unauthorized access to your online responses, though every effort will be made to protect your data.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Confidentiality:</h2>
+                                    <p className="mb-2">
+                                        Your responses across surveys will be linked using your Prolific ID. There will be no way for the researchers to identify you with this ID. Every effort will be made to keep your study-related information confidential. These efforts include: (1) collecting no personally identifying information in the surveys and (2) maintaining all data behind a firewall only accessible by the researchers.
+                                    </p>
+                                    <p className="mb-2">
+                                        However, there may be circumstances where this information must be released. For example, personal information regarding your participation in this study may be disclosed if required by the following groups:
+                                    </p>
+                                    <ul className="list-disc list-inside ml-4 mb-2">
+                                        <li>Office for Human Research Protections or other federal, state, or international regulatory agencies;</li>
+                                        <li>The Ohio State University Institutional Review Board or Office of Responsible Research Practices;</li>
+                                    </ul>
+                                    <p>
+                                        We will work to make sure that no one sees your survey responses without approval, but, because we are using the Internet, there is a chance that someone could access your online responses without permission. In some cases, this information could be used to identify you.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Incentives:</h2>
+                                    <p>
+                                        You will be compensated $6 for completing the study through the survey platform Prolific.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Participant Rights:</h2>
+                                    <p className="mb-2">
+                                        You may choose not to participate in this study without penalty or loss of benefits to which you are otherwise entitled. Your decision to participate or not will not affect employment status.
+                                    </p>
+                                    <p>
+                                        If you choose to participate in the study, you may discontinue participation at any time without penalty or loss of benefits. By consenting to participate, you do not give up any personal legal rights you may have as a participant in this study.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h2 className="font-bold text-gray-800 mb-2">Contacts and Questions:</h2>
+                                    <p className="mb-2">
+                                        For questions, concerns, or complaints about the study, or if you feel you have been harmed by your participation, you may contact Hun Lee (lee.7313@osu.edu).
+                                    </p>
+                                    <p>
+                                        For questions about your rights as a participant or to report concerns, contact Ms. Sandra Meadows in the Office of Responsible Research Practices at 1-800-678-6251.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Consent Selection */}
+                            <div className="mb-8 p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
+                                <h2 className="font-bold text-gray-800 mb-4">Giving Consent for Participation:</h2>
+                                <p className="text-sm text-gray-700 mb-4">
+                                    I have read and understand this form. I have had the opportunity to ask questions and have them answered to my satisfaction. I may request a copy of this form for my records.
+                                </p>
+                                <div className="space-y-3">
+                                    <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="consent"
+                                            checked={consentGiven === true}
+                                            onChange={() => setConsentGiven(true)}
+                                            className="w-5 h-5"
+                                        />
+                                        <span className="text-sm text-gray-700 font-medium">I agree to participate in this study</span>
+                                    </label>
+                                    <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="consent"
+                                            checked={consentGiven === false}
+                                            onChange={() => {
+                                                setConsentGiven(false);
+                                                alert('Thank you for your time. You will now be redirected.');
+                                                window.location.href = 'https://www.prolific.com';
+                                            }}
+                                            className="w-5 h-5"
+                                        />
+                                        <span className="text-sm text-gray-700 font-medium">I do not agree to participate in this study</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Submit Button */}
+                            <div className="pt-4">
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={consentGiven !== true || isLoading}
+                                    className={`w-full px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center text-lg ${
+                                        consentGiven !== true || isLoading
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        'Continue →'
+                                    )}
+                                </button>
+
+                                {consentGiven !== true && (
+                                    <p className="text-center text-sm text-gray-500 mt-3">
+                                        Please select an option above to continue.
+                                    </p>
+                                )}
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<Consent />, document.getElementById('root'));
+    </script>
+
+</body>
+</html>

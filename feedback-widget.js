@@ -1,7 +1,9 @@
 // Feedback Widget Component
 // Include this script in any page that needs the feedback widget
+// DISABLED - Comment out the return statement below to re-enable
 
 (function() {
+    return; // Widget disabled
     // Firebase config (same as other pages)
     const firebaseConfig = {
         apiKey: "AIzaSyClsZXLxKOXjUtB5loTfz0__GpJ8AQYEas",

@@ -61,48 +61,6 @@
 
             const papers = typeof AVAILABLE_PAPERS !== 'undefined' ? AVAILABLE_PAPERS : [];
 
-            // Assign condition using Firebase transaction (for experiment mode)
-            // Assigns to the condition with fewest participants to maintain balance
-            const assignCondition = async () => {
-                const counterRef = db.collection('meta').doc('conditionCounts');
-
-                const assignedCondition = await db.runTransaction(async (transaction) => {
-                    const doc = await transaction.get(counterRef);
-                    const counts = doc.data() || {
-                        without_llm: 0,
-                        with_llm: 0,
-                        with_llm_extended: 0
-                    };
-
-                    // Determine which conditions are available based on audio
-                    const availableConditions = audioAvailable
-                        ? ['without_llm', 'with_llm', 'with_llm_extended']
-                        : ['without_llm', 'with_llm'];  // No extended if no audio
-
-                    // Find condition with minimum count among available ones
-                    let minCondition = availableConditions[0];
-                    let minCount = counts[minCondition] || 0;
-
-                    for (const cond of availableConditions) {
-                        const count = counts[cond] || 0;
-                        if (count < minCount) {
-                            minCount = count;
-                            minCondition = cond;
-                        }
-                    }
-
-                    // Update count for assigned condition
-                    transaction.set(counterRef, {
-                        ...counts,
-                        [minCondition]: (counts[minCondition] || 0) + 1
-                    }, { merge: true });
-
-                    return minCondition;
-                });
-
-                return assignedCondition;
-            };
-
             const handleSubmit = async (e) => {
                 e.preventDefault();
 
@@ -144,7 +102,7 @@
                                 }
 
                                 // Reading not started - allow restart
-                                // Decrease count for previous condition
+                                // Decrease count for previous condition if it was assigned
                                 const prevCondition = prevExpData.condition;
                                 if (prevCondition) {
                                     const counterRef = db.collection('meta').doc('conditionCounts');
@@ -169,46 +127,21 @@
                         }
                     }
 
-                    // Step 2: Determine condition and paper
-                    let assignedCondition;
-                    let assignedPaper = currentPaper || 'mroz2018';  // Default to mroz2018 if not selected
+                    // Step 2: Participation is allowed - go to consent page
+                    // Condition assignment is deferred until consent is given
+                    const assignedPaper = currentPaper || 'mroz2018';
 
+                    // For test mode, pass condition in URL
                     if (mode === 'test') {
-                        // Test mode: use manually selected condition
-                        assignedCondition = condition;
+                        window.location.href = `consent.html?participantId=${participantId}&mode=${mode}&condition=${condition}&paper=${assignedPaper}&audioAvailable=${audioAvailable}`;
                     } else {
-                        // Experiment mode: auto-assign condition
-                        assignedCondition = await assignCondition();
+                        // Experiment mode: condition will be assigned after consent
+                        window.location.href = `consent.html?participantId=${participantId}&mode=${mode}&paper=${assignedPaper}&audioAvailable=${audioAvailable}`;
                     }
 
-                    // Step 3: Create new experiment document in users/{participantId}/experiments/{experimentId}
-                    const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc();
-                    const experimentId = experimentRef.id;
-
-                    await experimentRef.set({
-                        participantId,
-                        condition: assignedCondition,
-                        paper: assignedPaper,
-                        mode,
-                        audioAvailable,
-                        status: 'in_progress',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-
-                    // Step 4: Update user document
-                    await userRef.set({
-                        participantId,
-                        status: 'in_progress',
-                        currentExperimentId: experimentId,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-
-                    // Navigate to pre-task
-                    window.location.href = `pre-task.html?participantId=${participantId}&experimentId=${experimentId}&mode=${mode}&condition=${assignedCondition}&paper=${assignedPaper}`;
-
                 } catch (error) {
-                    console.error('Error saving:', error);
-                    alert('Failed to save. Please try again.');
+                    console.error('Error checking participation:', error);
+                    alert('Failed to verify participation status. Please try again.');
                     setIsLoading(false);
                 }
             };
@@ -329,10 +262,10 @@
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
-                                                Starting...
+                                                Checking...
                                             </>
                                         ) : (
-                                            'Start Experiment →'
+                                            'Continue →'
                                         )}
                                     </button>
                                 </div>
@@ -346,7 +279,5 @@
         ReactDOM.render(<Landing />, document.getElementById('root'));
     </script>
 
-    <!-- Feedback Widget -->
-    <script src="feedback-widget.js"></script>
 </body>
 </html>
