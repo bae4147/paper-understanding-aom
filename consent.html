@@ -266,15 +266,16 @@
                                             type="radio"
                                             name="consent"
                                             checked={consentGiven === false}
-                                            onChange={() => {
-                                                setConsentGiven(false);
-                                                alert('Thank you for your time. You will now be redirected.');
-                                                window.location.href = 'https://www.prolific.com';
-                                            }}
+                                            onChange={() => setConsentGiven(false)}
                                             className="w-5 h-5"
                                         />
                                         <span className="text-sm text-gray-700 font-medium">I do not agree to participate in this study</span>
                                     </label>
+                                    {consentGiven === false && (
+                                        <p className="text-sm text-gray-500 mt-2 ml-8">
+                                            If you do not agree, you cannot participate and will not be compensated. <a href="https://www.prolific.com" className="text-blue-600 hover:underline">Return to Prolific home</a>
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
@@ -302,7 +303,7 @@
                                     )}
                                 </button>
 
-                                {consentGiven !== true && (
+                                {consentGiven === null && (
                                     <p className="text-center text-sm text-gray-500 mt-3">
                                         Please select an option above to continue.
                                     </p>

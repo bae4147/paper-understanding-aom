@@ -291,12 +291,44 @@
             useEffect(() => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const cond = urlParams.get('condition');
-                const paper = urlParams.get('paper');
+                const paperId = urlParams.get('paper') || 'mroz2018';
 
                 // Demo mode - set dummy participant ID
                 setParticipantId('demo_user');
                 if (cond) setCondition(cond);
-                if (paper) setCurrentPaper(paper);
+                setCurrentPaper(paperId);
+
+                // Load paper content
+                const paper = papers.find(p => p.id === paperId);
+                if (paper && paper.url) {
+                    const paperUrl = '../' + paper.url;
+                    fetch(paperUrl)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const proseDiv = doc.querySelector('.prose');
+                            if (proseDiv) {
+                                setPaperContent(proseDiv.innerHTML);
+                            } else {
+                                setPaperContent('<p>Error: Could not load paper content</p>');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading paper:', error);
+                            setPaperContent('<p>Error loading paper.</p>');
+                        });
+
+                    // Load quiz questions
+                    fetch(`../questions_data/${paperId}.json`)
+                        .then(res => res.ok ? res.json() : null)
+                        .then(data => {
+                            if (data && data.questions) {
+                                setQuizQuestions(data.questions);
+                            }
+                        })
+                        .catch(() => {});
+                }
 
                 // Auto-start to reading-guide phase
                 setPhase('reading-guide');
