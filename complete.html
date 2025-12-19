@@ -12,32 +12,17 @@
             <div class="bg-white rounded-xl shadow-2xl p-8">
                 <div class="text-6xl mb-6">🎉</div>
                 <h1 class="text-3xl font-bold text-gray-800 mb-4">Thank You!</h1>
-                <p class="text-lg text-gray-600 mb-4">
+                <p class="text-lg text-gray-600 mb-6">
                     You have successfully completed the study.
                 </p>
 
-                <!-- Option 1: Go to Prolific -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-4">
-                    <p class="text-gray-800 font-semibold mb-3">Click the button below to return to Prolific</p>
+                    <p class="text-gray-800 font-semibold mb-3">To confirm your submission on Prolific, click the button below</p>
                     <a href="https://app.prolific.com/submissions/complete?cc=CNST1ELE"
                        target="_blank"
                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-lg transition-colors">
                         Return to Prolific
                     </a>
-                </div>
-
-                <div class="text-gray-400 text-sm my-3">or</div>
-
-                <!-- Option 2: Copy code -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
-                    <p class="text-gray-800 font-semibold mb-3">Enter the completion code manually</p>
-                    <div class="flex items-center justify-center gap-3 flex-wrap">
-                        <span id="completion-code" class="font-mono font-bold text-2xl text-blue-700 bg-white border border-blue-200 px-4 py-2 rounded tracking-wider">CNST1ELE</span>
-                        <button onclick="copyCode()"
-                                class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded text-sm font-medium transition-colors">
-                            <span id="copy-text">Copy</span>
-                        </button>
-                    </div>
                 </div>
 
                 <p class="text-gray-400 text-xs mt-6">
@@ -46,51 +31,5 @@
             </div>
         </div>
     </div>
-
-    <script>
-        function copyCode() {
-            const code = document.getElementById('completion-code').textContent;
-            const copyText = document.getElementById('copy-text');
-
-            // Try modern clipboard API first
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(code).then(() => {
-                    copyText.textContent = 'Copied!';
-                    setTimeout(() => {
-                        copyText.textContent = 'Copy';
-                    }, 2000);
-                }).catch(() => {
-                    // Fallback if clipboard API fails
-                    fallbackCopy(code);
-                });
-            } else {
-                // Fallback for older browsers or non-HTTPS
-                fallbackCopy(code);
-            }
-        }
-
-        function fallbackCopy(text) {
-            const copyText = document.getElementById('copy-text');
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-9999px';
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                copyText.textContent = 'Copied!';
-                setTimeout(() => {
-                    copyText.textContent = 'Copy';
-                }, 2000);
-            } catch (err) {
-                copyText.textContent = 'Failed';
-                setTimeout(() => {
-                    copyText.textContent = 'Copy';
-                }, 2000);
-            }
-            document.body.removeChild(textArea);
-        }
-    </script>
 </body>
 </html>
