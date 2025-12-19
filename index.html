@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>[테스트용 페이지] </title>
+    <title>Reading Experiment</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -123,7 +123,7 @@
             const [usedAiDuringReading, setUsedAiDuringReading] = useState(null); // null, 'yes', 'no'
             const [noAiAgreed, setNoAiAgreed] = useState(false); // For without_llm condition warning
             const [isRedirecting, setIsRedirecting] = useState(false); // To skip beforeunload during redirect
-            const [readingTimeLeft, setReadingTimeLeft] = useState(10); // Track remaining time (TEMP: 10 seconds for testing)
+            const [readingTimeLeft, setReadingTimeLeft] = useState(20 * 60); // Track remaining time (20 minutes)
 
             // Reading phase state
             const [scrollPosition, setScrollPosition] = useState(0);
@@ -1959,7 +1959,7 @@ Use markdown formatting for better readability:
                             </div>
                             <div className="flex items-center space-x-4">
                                 <Timer
-                                    seconds={10}
+                                    seconds={20 * 60}
                                     isActive={readingActive}
                                     phase="reading"
                                     onTimeUpdate={(time) => setReadingTimeLeft(time)}
@@ -2484,7 +2484,7 @@ Use markdown formatting for better readability:
                             </div>
                             <div className="flex items-center space-x-4">
                                 <Timer
-                                    seconds={10}
+                                    seconds={20 * 60}
                                     isActive={reviewActive}
                                     phase="review"
                                     onComplete={() => alert('Review time is up!')}
