@@ -4,12 +4,18 @@ Firebase Data Export Script
 - Fetches all experiment data from Firebase
 - Saves raw JSON data
 - Converts to CSV for analysis
+
+Usage:
+    python export_firebase_data.py              # Export all data
+    python export_firebase_data.py --today      # Export only today's data
+    python export_firebase_data.py --date 2024-12-20  # Export specific date
 """
 
 import json
 import csv
 import os
-from datetime import datetime
+import argparse
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Firebase Admin SDK
@@ -50,15 +56,25 @@ def init_firebase():
         return None
 
 
-def fetch_all_experiments(db):
-    """Fetch all experiment data from Firebase"""
-    print("Fetching all experiments from Firebase...")
+def fetch_all_experiments(db, date_filter=None):
+    """Fetch all experiment data from Firebase
+
+    Args:
+        db: Firestore client
+        date_filter: Optional date string (YYYY-MM-DD) to filter by
+    """
+    if date_filter:
+        print(f"Fetching experiments from Firebase (date: {date_filter})...")
+    else:
+        print("Fetching all experiments from Firebase...")
 
     all_data = []
     users_ref = db.collection('users')
     users = users_ref.stream()
 
     user_count = 0
+    filtered_count = 0
+
     for user_doc in users:
         user_count += 1
         user_id = user_doc.id
@@ -70,12 +86,46 @@ def fetch_all_experiments(db):
 
         for exp_doc in experiments:
             exp_data = exp_doc.to_dict()
+
+            # Apply date filter if specified
+            if date_filter:
+                # Check various timestamp fields
+                exp_date = None
+
+                # Try readingStartedAt
+                if exp_data.get('readingStartedAt'):
+                    ts = exp_data['readingStartedAt']
+                    if hasattr(ts, 'timestamp'):  # Firestore Timestamp
+                        exp_date = datetime.fromtimestamp(ts.timestamp()).strftime('%Y-%m-%d')
+                    elif isinstance(ts, str):
+                        exp_date = ts[:10]
+
+                # Try preTask.completedAt
+                if not exp_date and exp_data.get('preTask', {}).get('completedAt'):
+                    ts = exp_data['preTask']['completedAt']
+                    if isinstance(ts, str):
+                        exp_date = ts[:10]
+
+                # Try updatedAt
+                if not exp_date and exp_data.get('updatedAt'):
+                    ts = exp_data['updatedAt']
+                    if hasattr(ts, 'timestamp'):
+                        exp_date = datetime.fromtimestamp(ts.timestamp()).strftime('%Y-%m-%d')
+
+                # Skip if no date found or doesn't match
+                if not exp_date or exp_date != date_filter:
+                    filtered_count += 1
+                    continue
+
             exp_data['_userId'] = user_id
             exp_data['_experimentDocId'] = exp_doc.id
             exp_data['_userStatus'] = user_data.get('status', 'unknown')
             all_data.append(exp_data)
 
-    print(f"  Found {user_count} users, {len(all_data)} experiments")
+    if date_filter:
+        print(f"  Found {user_count} users, {len(all_data)} experiments matching date (filtered out {filtered_count})")
+    else:
+        print(f"  Found {user_count} users, {len(all_data)} experiments")
     return all_data
 
 
@@ -409,9 +459,51 @@ def check_data_completeness(data):
     print("\n" + "="*60)
 
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description='Export Firebase experiment data to JSON and CSV',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python export_firebase_data.py              # Export all data
+  python export_firebase_data.py --today      # Export only today's data
+  python export_firebase_data.py --date 2024-12-20  # Export specific date
+        """
+    )
+    parser.add_argument(
+        '--today',
+        action='store_true',
+        help='Only export data from today'
+    )
+    parser.add_argument(
+        '--date',
+        type=str,
+        help='Only export data from specific date (YYYY-MM-DD format)'
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
+    # Determine date filter
+    date_filter = None
+    if args.today:
+        date_filter = datetime.now().strftime('%Y-%m-%d')
+    elif args.date:
+        # Validate date format
+        try:
+            datetime.strptime(args.date, '%Y-%m-%d')
+            date_filter = args.date
+        except ValueError:
+            print(f"ERROR: Invalid date format '{args.date}'. Use YYYY-MM-DD format.")
+            return
+
     print("="*60)
     print("FIREBASE DATA EXPORT")
+    if date_filter:
+        print(f"Date filter: {date_filter}")
     print("="*60)
 
     # Create output directory
@@ -424,7 +516,7 @@ def main():
         return
 
     # Fetch data
-    data = fetch_all_experiments(db)
+    data = fetch_all_experiments(db, date_filter=date_filter)
 
     if not data:
         print("No data found!")

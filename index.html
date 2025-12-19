@@ -1366,6 +1366,7 @@ Use markdown formatting for better readability:
                 let finalEvent = null;
 
                 if (activeFocus === 'reading') {
+                    // Log final scroll_action for reading panel
                     const finalPauseDuration = now - lastActivityTimeRef.current;
                     let finalClassification = finalPauseDuration > 5000 ? 'reading' : (finalPauseDuration > 2000 ? 'scanning' : 'scrolling');
 
@@ -1389,6 +1390,55 @@ Use markdown formatting for better readability:
                     };
 
                     setEvents(prev => [...prev, finalEvent]);
+                } else if (activeFocus === 'chat') {
+                    // Log final llm_activity for chat panel
+                    const activityDuration = now - lastTypingActivityRef.current;
+                    const classification = isTypingRef.current ? 'typing' : 'none-typing';
+
+                    if (typingTimeoutRef.current) {
+                        clearTimeout(typingTimeoutRef.current);
+                        typingTimeoutRef.current = null;
+                    }
+
+                    eventIdCounter.current++;
+                    finalEvent = {
+                        eventId: `${experimentId}_${eventIdCounter.current}`,
+                        timestamp: now,
+                        eventType: 'llm_activity',
+                        phase: 'reading',
+                        participantId,
+                        experimentId,
+                        condition,
+                        paper: currentPaper,
+                        classification,
+                        duration: activityDuration,
+                        isFinalSegment: true
+                    };
+
+                    setEvents(prev => [...prev, finalEvent]);
+                    console.log(`🤖 [llm_activity] FINAL ${classification} | duration: ${(activityDuration/1000).toFixed(2)}s`);
+                } else {
+                    // Log final activity for extended tabs (audio, video, infographics, simplified, quiz)
+                    const timeOnTab = now - focusStartTimeRef.current;
+
+                    eventIdCounter.current++;
+                    finalEvent = {
+                        eventId: `${experimentId}_${eventIdCounter.current}`,
+                        timestamp: now,
+                        eventType: 'resource_tab_switch',
+                        phase: 'reading',
+                        participantId,
+                        experimentId,
+                        condition,
+                        paper: currentPaper,
+                        from: activeFocus,
+                        to: 'phase_complete',
+                        duration: timeOnTab,
+                        isFinalSegment: true
+                    };
+
+                    setEvents(prev => [...prev, finalEvent]);
+                    console.log(`📑 [resource_tab_switch] FINAL ${activeFocus} | duration: ${(timeOnTab/1000).toFixed(2)}s`);
                 }
 
                 const elapsed = Date.now() - focusStartTimeRef.current;
