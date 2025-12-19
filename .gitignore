@@ -22,3 +22,10 @@ __pycache__/
 # Backup files
 *_old.html
 *_backup.html
+
+# Firebase credentials (NEVER COMMIT!)
+firebase-service-account.json
+*-service-account*.json
+
+# Data exports (contains participant data)
+data_exports/
