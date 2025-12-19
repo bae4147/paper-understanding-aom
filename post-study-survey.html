@@ -83,6 +83,10 @@
             // Study feedback (optional)
             const [studyFeedback, setStudyFeedback] = useState('');
 
+            // Attention check
+            const [attentionFocus, setAttentionFocus] = useState('');
+            const [attentionCheck, setAttentionCheck] = useState('');
+
             // Loading state
             const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -162,7 +166,8 @@
                     !criticalOwnIdeas || !criticalAlternativePerspectives || !criticalVerifyCredibility || !criticalQuestionClaims || !criticalBroaderImplications ||
                     !llmFrequency ||
                     !age || !gender || !workingSituation || !workHoursPerWeek || !yearsInOrganization || !yearsInJob ||
-                    !jobTitle || !industry || ethnicity.length === 0 || !education || !englishProficiency) {
+                    !jobTitle || !industry || ethnicity.length === 0 || !education || !englishProficiency ||
+                    !attentionFocus || !attentionCheck) {
                     alert('Please complete all required fields.');
                     return;
                 }
@@ -230,6 +235,10 @@
                         ethnicity,
                         education,
                         englishProficiency
+                    },
+                    attentionCheck: {
+                        focus: parseInt(attentionFocus),
+                        stronglyDisagreeCheck: parseInt(attentionCheck)
                     },
                     studyFeedback: studyFeedback.trim() || null,
                     surveyCompletedAt: new Date().toISOString()
@@ -1360,6 +1369,67 @@
                                                         <span className="text-sm text-gray-700">{option.label}</span>
                                                     </label>
                                                 ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Attention Check Section */}
+                                <div className="border-b pb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-2">Final Questions</h2>
+                                    <p className="text-sm text-gray-600 mb-2">This is the final page of the survey. Please indicate your agreement or disagreement with the following statements about this survey.</p>
+                                    <p className="text-sm text-gray-600 mb-4">This will not, in any way, affect your compensation for this survey.</p>
+
+                                    <div className="space-y-8">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                In general, I was focused when reading and responding to items on this assessment. *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Strongly disagree</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setAttentionFocus(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                attentionFocus === value.toString()
+                                                                    ? 'bg-blue-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Strongly agree</span>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                Click "strongly disagree" if you are still paying attention to this assessment. *
+                                            </label>
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-xs text-gray-500">Strongly disagree</span>
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3, 4, 5].map(value => (
+                                                        <button
+                                                            key={value}
+                                                            type="button"
+                                                            onClick={() => setAttentionCheck(value.toString())}
+                                                            className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                                                                attentionCheck === value.toString()
+                                                                    ? 'bg-blue-600 text-white'
+                                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            {value}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-500">Strongly agree</span>
                                             </div>
                                         </div>
                                     </div>
