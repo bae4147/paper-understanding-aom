@@ -6,17 +6,20 @@ Firebase Data Export Script
 - Converts to CSV for analysis
 
 Usage:
-    python export_firebase_data.py              # Export all data
-    python export_firebase_data.py --today      # Export only today's data
-    python export_firebase_data.py --date 2024-12-20  # Export specific date
+    python export_firebase_data.py                          # Export all data
+    python export_firebase_data.py --after "2025-12-20 03:30"  # Export data after specific datetime
+    python export_firebase_data.py --today                  # Export only today's data
 """
 
 import json
 import csv
 import os
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# Korea Standard Time (UTC+9)
+KST = timezone(timedelta(hours=9))
 
 # Firebase Admin SDK
 import firebase_admin
@@ -56,15 +59,47 @@ def init_firebase():
         return None
 
 
-def fetch_all_experiments(db, date_filter=None):
+def get_experiment_datetime(exp_data):
+    """Extract datetime from experiment data for filtering (returns KST aware datetime)"""
+    # Try various timestamp fields
+
+    # Try preTask.completedAt (ISO string)
+    if exp_data.get('preTask', {}).get('completedAt'):
+        ts_str = exp_data['preTask']['completedAt']
+        if isinstance(ts_str, str):
+            try:
+                dt = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+                # Convert to KST
+                return dt.astimezone(KST)
+            except:
+                pass
+
+    # Try readingStartedAt (Firestore Timestamp)
+    if exp_data.get('readingStartedAt'):
+        ts = exp_data['readingStartedAt']
+        if hasattr(ts, 'timestamp'):
+            dt = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc)
+            return dt.astimezone(KST)
+
+    # Try updatedAt (Firestore Timestamp)
+    if exp_data.get('updatedAt'):
+        ts = exp_data['updatedAt']
+        if hasattr(ts, 'timestamp'):
+            dt = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc)
+            return dt.astimezone(KST)
+
+    return None
+
+
+def fetch_all_experiments(db, after_datetime=None):
     """Fetch all experiment data from Firebase
 
     Args:
         db: Firestore client
-        date_filter: Optional date string (YYYY-MM-DD) to filter by
+        after_datetime: Optional datetime to filter experiments created after this time
     """
-    if date_filter:
-        print(f"Fetching experiments from Firebase (date: {date_filter})...")
+    if after_datetime:
+        print(f"Fetching experiments after {after_datetime}...")
     else:
         print("Fetching all experiments from Firebase...")
 
@@ -87,33 +122,10 @@ def fetch_all_experiments(db, date_filter=None):
         for exp_doc in experiments:
             exp_data = exp_doc.to_dict()
 
-            # Apply date filter if specified
-            if date_filter:
-                # Check various timestamp fields
-                exp_date = None
-
-                # Try readingStartedAt
-                if exp_data.get('readingStartedAt'):
-                    ts = exp_data['readingStartedAt']
-                    if hasattr(ts, 'timestamp'):  # Firestore Timestamp
-                        exp_date = datetime.fromtimestamp(ts.timestamp()).strftime('%Y-%m-%d')
-                    elif isinstance(ts, str):
-                        exp_date = ts[:10]
-
-                # Try preTask.completedAt
-                if not exp_date and exp_data.get('preTask', {}).get('completedAt'):
-                    ts = exp_data['preTask']['completedAt']
-                    if isinstance(ts, str):
-                        exp_date = ts[:10]
-
-                # Try updatedAt
-                if not exp_date and exp_data.get('updatedAt'):
-                    ts = exp_data['updatedAt']
-                    if hasattr(ts, 'timestamp'):
-                        exp_date = datetime.fromtimestamp(ts.timestamp()).strftime('%Y-%m-%d')
-
-                # Skip if no date found or doesn't match
-                if not exp_date or exp_date != date_filter:
+            # Apply datetime filter if specified
+            if after_datetime:
+                exp_dt = get_experiment_datetime(exp_data)
+                if not exp_dt or exp_dt < after_datetime:
                     filtered_count += 1
                     continue
 
@@ -122,8 +134,8 @@ def fetch_all_experiments(db, date_filter=None):
             exp_data['_userStatus'] = user_data.get('status', 'unknown')
             all_data.append(exp_data)
 
-    if date_filter:
-        print(f"  Found {user_count} users, {len(all_data)} experiments matching date (filtered out {filtered_count})")
+    if after_datetime:
+        print(f"  Found {user_count} users, {len(all_data)} experiments after filter (filtered out {filtered_count})")
     else:
         print(f"  Found {user_count} users, {len(all_data)} experiments")
     return all_data
@@ -466,20 +478,20 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python export_firebase_data.py              # Export all data
-  python export_firebase_data.py --today      # Export only today's data
-  python export_firebase_data.py --date 2024-12-20  # Export specific date
+  python export_firebase_data.py                              # Export all data
+  python export_firebase_data.py --after "2025-12-20 03:30"   # Export after datetime
+  python export_firebase_data.py --today                      # Export only today's data
         """
+    )
+    parser.add_argument(
+        '--after',
+        type=str,
+        help='Only export data after this datetime (format: "YYYY-MM-DD HH:MM" or "YYYY-MM-DD")'
     )
     parser.add_argument(
         '--today',
         action='store_true',
         help='Only export data from today'
-    )
-    parser.add_argument(
-        '--date',
-        type=str,
-        help='Only export data from specific date (YYYY-MM-DD format)'
     )
     return parser.parse_args()
 
@@ -487,23 +499,29 @@ Examples:
 def main():
     args = parse_args()
 
-    # Determine date filter
-    date_filter = None
+    # Determine datetime filter
+    after_datetime = None
     if args.today:
-        date_filter = datetime.now().strftime('%Y-%m-%d')
-    elif args.date:
-        # Validate date format
+        # Today at midnight KST
+        now_kst = datetime.now(KST)
+        after_datetime = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif args.after:
         try:
-            datetime.strptime(args.date, '%Y-%m-%d')
-            date_filter = args.date
+            # Try parsing with time (as KST)
+            after_datetime = datetime.strptime(args.after, '%Y-%m-%d %H:%M').replace(tzinfo=KST)
         except ValueError:
-            print(f"ERROR: Invalid date format '{args.date}'. Use YYYY-MM-DD format.")
-            return
+            try:
+                # Try parsing date only (as KST)
+                after_datetime = datetime.strptime(args.after, '%Y-%m-%d').replace(tzinfo=KST)
+            except ValueError:
+                print(f"ERROR: Invalid datetime format '{args.after}'.")
+                print("Use format: 'YYYY-MM-DD HH:MM' or 'YYYY-MM-DD'")
+                return
 
     print("="*60)
     print("FIREBASE DATA EXPORT")
-    if date_filter:
-        print(f"Date filter: {date_filter}")
+    if after_datetime:
+        print(f"Filter: after {after_datetime.strftime('%Y-%m-%d %H:%M')} KST")
     print("="*60)
 
     # Create output directory
@@ -516,7 +534,7 @@ def main():
         return
 
     # Fetch data
-    data = fetch_all_experiments(db, date_filter=date_filter)
+    data = fetch_all_experiments(db, after_datetime=after_datetime)
 
     if not data:
         print("No data found!")

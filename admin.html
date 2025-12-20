@@ -33,12 +33,22 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Default filter: 2025-12-20 03:30 KST
+        const DEFAULT_FILTER_DATE = '2025-12-20';
+        const DEFAULT_FILTER_TIME = '03:30';
+
         function AdminDashboard() {
             const [experiments, setExperiments] = useState([]);
+            const [filteredExperiments, setFilteredExperiments] = useState([]);
             const [selectedExperiment, setSelectedExperiment] = useState(null);
             const [loading, setLoading] = useState(false);
             const [view, setView] = useState('list');
             const chartRefs = useRef({});
+
+            // Date filter state
+            const [filterEnabled, setFilterEnabled] = useState(true);
+            const [filterDate, setFilterDate] = useState(DEFAULT_FILTER_DATE);
+            const [filterTime, setFilterTime] = useState(DEFAULT_FILTER_TIME);
 
             // Condition counts from meta/conditionCounts
             const [conditionCounts, setConditionCounts] = useState({
@@ -46,6 +56,68 @@
                 with_llm: 0,
                 with_llm_extended: 0
             });
+
+            // Get experiment datetime for filtering (KST)
+            const getExperimentDatetime = (exp) => {
+                // Try preTask.completedAt (ISO string)
+                if (exp.preTask?.completedAt) {
+                    try {
+                        return new Date(exp.preTask.completedAt);
+                    } catch (e) {}
+                }
+                // Try readingStartedAt
+                if (exp.readingStartedAt) {
+                    if (exp.readingStartedAt.toDate) {
+                        return exp.readingStartedAt.toDate();
+                    }
+                    return new Date(exp.readingStartedAt);
+                }
+                // Try startedAt
+                if (exp.startedAt) {
+                    return exp.startedAt instanceof Date ? exp.startedAt : new Date(exp.startedAt);
+                }
+                // Try createdAt
+                if (exp.createdAt) {
+                    if (exp.createdAt.toDate) {
+                        return exp.createdAt.toDate();
+                    }
+                    return new Date(exp.createdAt);
+                }
+                return null;
+            };
+
+            // Apply filter when experiments or filter settings change
+            useEffect(() => {
+                if (!filterEnabled) {
+                    setFilteredExperiments(experiments);
+                    return;
+                }
+
+                // Parse filter datetime as KST (UTC+9)
+                const filterDatetimeStr = `${filterDate}T${filterTime}:00+09:00`;
+                const filterDatetime = new Date(filterDatetimeStr);
+
+                const filtered = experiments.filter(exp => {
+                    const expDatetime = getExperimentDatetime(exp);
+                    if (!expDatetime) return false;
+                    return expDatetime >= filterDatetime;
+                });
+
+                setFilteredExperiments(filtered);
+            }, [experiments, filterEnabled, filterDate, filterTime]);
+
+            // Calculate filtered condition counts
+            const filteredConditionCounts = {
+                without_llm: filteredExperiments.filter(e => e.condition === 'without_llm').length,
+                with_llm: filteredExperiments.filter(e => e.condition === 'with_llm').length,
+                with_llm_extended: filteredExperiments.filter(e => e.condition === 'with_llm_extended').length
+            };
+
+            // Calculate filtered completion counts
+            const filteredCompletionCounts = {
+                completed: filteredExperiments.filter(e => e.status === 'completed').length,
+                in_progress: filteredExperiments.filter(e => e.status !== 'completed').length
+            };
 
             // Load condition counts
             const loadConditionCounts = async () => {
@@ -1468,40 +1540,120 @@
                     </div>
 
                     <div className="max-w-7xl mx-auto px-6 py-6">
-                        {/* Condition Assignment Status */}
+                        {/* Date/Time Filter */}
+                        <div className="bg-white rounded-lg shadow p-4 mb-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={filterEnabled}
+                                            onChange={(e) => setFilterEnabled(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 rounded"
+                                        />
+                                        <span className="font-medium text-gray-700">Filter by date/time (KST)</span>
+                                    </label>
+
+                                    {filterEnabled && (
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-gray-500">After:</span>
+                                            <input
+                                                type="date"
+                                                value={filterDate}
+                                                onChange={(e) => setFilterDate(e.target.value)}
+                                                className="px-3 py-1 border border-gray-300 rounded text-sm"
+                                            />
+                                            <input
+                                                type="time"
+                                                value={filterTime}
+                                                onChange={(e) => setFilterTime(e.target.value)}
+                                                className="px-3 py-1 border border-gray-300 rounded text-sm"
+                                            />
+                                            <span className="text-xs text-gray-500">KST</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {filterEnabled && (
+                                    <div className="text-sm text-gray-600">
+                                        Showing <span className="font-bold text-blue-600">{filteredExperiments.length}</span> of {experiments.length} experiments
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Condition Assignment Status - Filtered */}
                         <div className="bg-white rounded-lg shadow p-6 mb-6">
-                            <h2 className="text-lg font-bold mb-4">Condition Assignment Status</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold">
+                                    {filterEnabled ? 'Filtered Results' : 'All Results'}
+                                    {filterEnabled && (
+                                        <span className="ml-2 text-sm font-normal text-gray-500">
+                                            (after {filterDate} {filterTime} KST)
+                                        </span>
+                                    )}
+                                </h2>
+                            </div>
+
+                            {/* Completion Status */}
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                                    <div className="text-sm text-gray-600">Completed</div>
+                                    <div className="text-3xl font-bold text-green-600">{filteredCompletionCounts.completed}</div>
+                                </div>
+                                <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                                    <div className="text-sm text-gray-600">In Progress / Incomplete</div>
+                                    <div className="text-3xl font-bold text-yellow-600">{filteredCompletionCounts.in_progress}</div>
+                                </div>
+                            </div>
+
+                            {/* Condition Distribution */}
                             <div className="grid grid-cols-4 gap-4">
                                 <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-gray-500">
                                     <div className="text-sm text-gray-600">Without LLM</div>
-                                    <div className="text-3xl font-bold text-gray-700">{conditionCounts.without_llm || 0}</div>
+                                    <div className="text-3xl font-bold text-gray-700">{filteredConditionCounts.without_llm}</div>
                                 </div>
                                 <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
                                     <div className="text-sm text-gray-600">With LLM</div>
-                                    <div className="text-3xl font-bold text-purple-600">{conditionCounts.with_llm || 0}</div>
+                                    <div className="text-3xl font-bold text-purple-600">{filteredConditionCounts.with_llm}</div>
                                 </div>
                                 <div className="p-4 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
                                     <div className="text-sm text-gray-600">With LLM Extended</div>
-                                    <div className="text-3xl font-bold text-indigo-600">{conditionCounts.with_llm_extended || 0}</div>
+                                    <div className="text-3xl font-bold text-indigo-600">{filteredConditionCounts.with_llm_extended}</div>
                                 </div>
-                                <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                                    <div className="text-sm text-gray-600">Total Assigned</div>
-                                    <div className="text-3xl font-bold text-green-600">
-                                        {(conditionCounts.without_llm || 0) + (conditionCounts.with_llm || 0) + (conditionCounts.with_llm_extended || 0)}
+                                <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                    <div className="text-sm text-gray-600">Total</div>
+                                    <div className="text-3xl font-bold text-blue-600">
+                                        {filteredConditionCounts.without_llm + filteredConditionCounts.with_llm + filteredConditionCounts.with_llm_extended}
                                     </div>
                                 </div>
                             </div>
-                            <button
-                                onClick={loadConditionCounts}
-                                className="mt-4 text-sm text-blue-600 hover:text-blue-800"
-                            >
-                                Refresh counts
-                            </button>
+
+                            {/* Global counter from Firebase (for reference) */}
+                            {!filterEnabled && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <div className="text-xs text-gray-500 mb-2">Global Assignment Counter (from Firebase):</div>
+                                    <div className="flex space-x-4 text-xs text-gray-600">
+                                        <span>Without LLM: {conditionCounts.without_llm || 0}</span>
+                                        <span>With LLM: {conditionCounts.with_llm || 0}</span>
+                                        <span>Extended: {conditionCounts.with_llm_extended || 0}</span>
+                                        <button
+                                            onClick={loadConditionCounts}
+                                            className="text-blue-600 hover:text-blue-800"
+                                        >
+                                            Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex justify-between items-center mb-6">
                             <div className="text-lg font-semibold">
-                                Total: {experiments.length} experiments
+                                {filterEnabled
+                                    ? `Filtered: ${filteredExperiments.length} experiments`
+                                    : `Total: ${experiments.length} experiments`
+                                }
                             </div>
                             <button
                                 onClick={() => { loadExperiments(); loadConditionCounts(); }}
@@ -1526,10 +1678,13 @@
                                             Paper
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                            Status
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                             Events
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                            Completed
+                                            Completed At
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                             Action
@@ -1537,7 +1692,7 @@
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {experiments.map((exp) => (
+                                    {filteredExperiments.map((exp) => (
                                         <tr key={exp.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">{exp.participantId}</td>
                                             <td className="px-6 py-4">
@@ -1552,6 +1707,15 @@
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-sm">{exp.paper}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2 py-1 rounded text-xs ${
+                                                    exp.status === 'completed'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                    {exp.status || 'unknown'}
+                                                </span>
+                                            </td>
                                             <td className="px-6 py-4">{exp.events?.length || 0}</td>
                                             <td className="px-6 py-4 text-sm">
                                                 {exp.completedAt ? new Date(exp.completedAt).toLocaleString() : 'N/A'}
@@ -1572,9 +1736,12 @@
                                 </tbody>
                             </table>
 
-                            {experiments.length === 0 && !loading && (
+                            {filteredExperiments.length === 0 && !loading && (
                                 <div className="text-center py-12 text-gray-500">
-                                    No experiments found
+                                    {filterEnabled
+                                        ? `No experiments found after ${filterDate} ${filterTime} KST`
+                                        : 'No experiments found'
+                                    }
                                 </div>
                             )}
                         </div>
