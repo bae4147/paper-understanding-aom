@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Task vs Post-Task Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header .stats {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .filters {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .filters select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: #fff;
+        }
+
+        .filters input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            width: 200px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: #f8f9fa;
+            padding: 12px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header .participant-id {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .card-header .condition {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .condition.without_llm {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .condition.with_llm {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .condition.with_llm_extended {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .card-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 200px;
+        }
+
+        .side {
+            padding: 20px;
+        }
+
+        .side.pre {
+            background: #fafbfc;
+            border-right: 1px solid #eee;
+        }
+
+        .side.post {
+            background: #fff;
+        }
+
+        .side-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .side.pre .side-header {
+            color: #1976d2;
+        }
+
+        .side.post .side-header {
+            color: #388e3c;
+        }
+
+        .section {
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .strategies-list {
+            list-style: none;
+        }
+
+        .strategies-list li {
+            padding: 6px 0;
+            border-bottom: 1px dashed #eee;
+            font-size: 0.9rem;
+        }
+
+        .strategies-list li:last-child {
+            border-bottom: none;
+        }
+
+        .strategies-list li.new {
+            background: #e8f5e9;
+            padding: 6px 8px;
+            margin: 2px -8px;
+            border-radius: 4px;
+        }
+
+        .strategies-list li.removed {
+            background: #ffebee;
+            padding: 6px 8px;
+            margin: 2px -8px;
+            border-radius: 4px;
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .metrics {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        .metric-change {
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+
+        .metric-change.up {
+            color: #4caf50;
+        }
+
+        .metric-change.down {
+            color: #f44336;
+        }
+
+        .metric-change.same {
+            color: #999;
+        }
+
+        .challenges-text {
+            font-size: 0.85rem;
+            color: #555;
+            font-style: italic;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #ddd;
+        }
+
+        .no-data {
+            color: #ccc;
+            font-style: italic;
+            font-size: 0.85rem;
+        }
+
+        .summary-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .summary-item strong {
+            color: #333;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Pre-Task vs Post-Task Comparison</h1>
+            <div class="stats" id="stats">Loading...</div>
+        </div>
+        <div class="filters">
+            <select id="conditionFilter">
+                <option value="all">All Conditions</option>
+                <option value="without_llm">without_llm</option>
+                <option value="with_llm">with_llm</option>
+                <option value="with_llm_extended">with_llm_extended</option>
+            </select>
+            <select id="changeFilter">
+                <option value="all">All Changes</option>
+                <option value="added">Added Strategies</option>
+                <option value="same">No Change</option>
+            </select>
+            <input type="text" id="searchInput" placeholder="Search participant ID...">
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="summary-bar" id="summaryBar"></div>
+        <div id="cardsContainer"></div>
+    </div>
+
+    <script>
+        let allData = [];
+        let preData = {};
+        let postData = {};
+        let experiments = {};
+
+        async function loadData() {
+            try {
+                // Load pre-task data
+                const preResponse = await fetch('../data/processed/pre-task.csv');
+                const preText = await preResponse.text();
+                parseCSV(preText, preData);
+
+                // Load post-task data
+                const postResponse = await fetch('../data/processed/post-task.csv');
+                const postText = await postResponse.text();
+                parseCSV(postText, postData);
+
+                // Load experiments for condition info
+                const expResponse = await fetch('../data/processed/experiments.csv');
+                const expText = await expResponse.text();
+                parseExperiments(expText);
+
+                // Merge data
+                mergeData();
+                renderCards();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('cardsContainer').innerHTML =
+                    '<p style="color: red; padding: 20px;">Error loading data. Make sure CSV files exist in data/processed/</p>';
+            }
+        }
+
+        function parseCSV(text, targetObj) {
+            const lines = text.trim().split('\n');
+            const headers = parseCSVLine(lines[0]);
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length < headers.length) continue;
+
+                const row = {};
+                headers.forEach((h, idx) => row[h] = values[idx] || '');
+                targetObj[row.participantId] = row;
+            }
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function parseExperiments(text) {
+            const lines = text.trim().split('\n');
+            const headers = parseCSVLine(lines[0]);
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length < headers.length) continue;
+
+                const row = {};
+                headers.forEach((h, idx) => row[h] = values[idx] || '');
+                experiments[row.participantId] = row;
+            }
+        }
+
+        function mergeData() {
+            const allParticipants = new Set([...Object.keys(preData), ...Object.keys(postData)]);
+
+            allParticipants.forEach(pid => {
+                const pre = preData[pid] || {};
+                const post = postData[pid] || {};
+                const exp = experiments[pid] || {};
+
+                allData.push({
+                    participantId: pid,
+                    condition: exp.condition || 'unknown',
+                    country: exp.country || 'unknown',
+                    pre: {
+                        strategies: getStrategies(pre),
+                        confidence: pre.confidence || null,
+                        approachClarity: pre.approachClarity || null,
+                        challenges: pre.challenges || ''
+                    },
+                    post: {
+                        strategies: getStrategies(post),
+                        newStrategyConfidence: post.newStrategyConfidence || null,
+                        implementationLikelihood: post.implementationLikelihood || null,
+                        thinkingChange: post.thinkingChange || null
+                    }
+                });
+            });
+        }
+
+        function getStrategies(data) {
+            const strategies = [];
+            for (let i = 1; i <= 10; i++) {
+                const s = data[`strategy${i}`];
+                if (s && s.trim()) strategies.push(s.trim());
+            }
+            return strategies;
+        }
+
+        function compareStrategies(pre, post) {
+            const preSet = new Set(pre.map(s => s.toLowerCase().trim()));
+            const postSet = new Set(post.map(s => s.toLowerCase().trim()));
+
+            const added = post.filter(s => !preSet.has(s.toLowerCase().trim()));
+            const removed = pre.filter(s => !postSet.has(s.toLowerCase().trim()));
+            const kept = pre.filter(s => postSet.has(s.toLowerCase().trim()));
+
+            return { added, removed, kept };
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cardsContainer');
+            const conditionFilter = document.getElementById('conditionFilter').value;
+            const changeFilter = document.getElementById('changeFilter').value;
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = allData.filter(d => {
+                if (conditionFilter !== 'all' && d.condition !== conditionFilter) return false;
+                if (searchQuery && !d.participantId.toLowerCase().includes(searchQuery)) return false;
+
+                if (changeFilter !== 'all') {
+                    const comparison = compareStrategies(d.pre.strategies, d.post.strategies);
+                    if (changeFilter === 'added' && comparison.added.length === 0) return false;
+                    if (changeFilter === 'same' && (comparison.added.length > 0 || comparison.removed.length > 0)) return false;
+                }
+
+                return true;
+            });
+
+            container.innerHTML = filtered.map(d => renderCard(d)).join('');
+            updateStats(filtered.length);
+        }
+
+        function renderCard(data) {
+            const comparison = compareStrategies(data.pre.strategies, data.post.strategies);
+
+            return `
+                <div class="card" data-condition="${data.condition}">
+                    <div class="card-header">
+                        <span class="participant-id">${data.participantId}</span>
+                        <span class="condition ${data.condition}">${data.condition}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="side pre">
+                            <div class="side-header">Pre-Task</div>
+                            ${renderStrategies(data.pre.strategies, comparison, 'pre')}
+                            ${renderMetrics(data.pre)}
+                            ${renderChallenges(data.pre.challenges)}
+                        </div>
+                        <div class="side post">
+                            <div class="side-header">Post-Task</div>
+                            ${renderStrategies(data.post.strategies, comparison, 'post')}
+                            ${renderMetricsChange(data.pre, data.post)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStrategies(strategies, comparison, side) {
+            if (strategies.length === 0) {
+                return '<div class="section"><span class="no-data">No strategies listed</span></div>';
+            }
+
+            let items = '';
+            if (side === 'pre') {
+                strategies.forEach(s => {
+                    const isRemoved = comparison.removed.some(r => r.toLowerCase().trim() === s.toLowerCase().trim());
+                    items += `<li class="${isRemoved ? 'removed' : ''}">${escapeHtml(s)}</li>`;
+                });
+            } else {
+                strategies.forEach(s => {
+                    const isNew = comparison.added.some(a => a.toLowerCase().trim() === s.toLowerCase().trim());
+                    items += `<li class="${isNew ? 'new' : ''}">${escapeHtml(s)}</li>`;
+                });
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-title">Strategies (${strategies.length})</div>
+                    <ul class="strategies-list">${items}</ul>
+                </div>
+            `;
+        }
+
+        function renderMetrics(data) {
+            if (!data.confidence && !data.approachClarity) return '';
+
+            return `
+                <div class="metrics">
+                    ${data.confidence ? `
+                        <div class="metric">
+                            <div class="metric-value">${data.confidence}</div>
+                            <div class="metric-label">Confidence</div>
+                        </div>
+                    ` : ''}
+                    ${data.approachClarity ? `
+                        <div class="metric">
+                            <div class="metric-value">${data.approachClarity}</div>
+                            <div class="metric-label">Clarity</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderMetricsChange(pre, post) {
+            const preCount = pre.strategies.length;
+            const postCount = post.strategies.length;
+            const diff = postCount - preCount;
+
+            let changeClass = 'same';
+            let changeText = 'No change';
+            if (diff > 0) {
+                changeClass = 'up';
+                changeText = `+${diff} strategy`;
+            } else if (diff < 0) {
+                changeClass = 'down';
+                changeText = `${diff} strategy`;
+            }
+
+            return `
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value">${postCount}</div>
+                        <div class="metric-label">Strategies</div>
+                        <div class="metric-change ${changeClass}">${changeText}</div>
+                    </div>
+                    ${post.newStrategyConfidence ? `
+                        <div class="metric">
+                            <div class="metric-value">${post.newStrategyConfidence}</div>
+                            <div class="metric-label">New Strategy<br>Confidence</div>
+                        </div>
+                    ` : ''}
+                    ${post.implementationLikelihood ? `
+                        <div class="metric">
+                            <div class="metric-value">${post.implementationLikelihood}</div>
+                            <div class="metric-label">Implementation<br>Likelihood</div>
+                        </div>
+                    ` : ''}
+                    ${post.thinkingChange ? `
+                        <div class="metric">
+                            <div class="metric-value">${post.thinkingChange}</div>
+                            <div class="metric-label">Thinking<br>Change</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderChallenges(challenges) {
+            if (!challenges) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">Challenges</div>
+                    <div class="challenges-text">${escapeHtml(challenges)}</div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateStats(filteredCount) {
+            const total = allData.length;
+            const shown = filteredCount !== undefined ? filteredCount : total;
+            document.getElementById('stats').textContent = `Showing ${shown} of ${total} participants`;
+
+            // Update summary
+            const conditions = {};
+            allData.forEach(d => {
+                conditions[d.condition] = (conditions[d.condition] || 0) + 1;
+            });
+
+            let addedCount = 0;
+            let sameCount = 0;
+            allData.forEach(d => {
+                const comparison = compareStrategies(d.pre.strategies, d.post.strategies);
+                if (comparison.added.length > 0) addedCount++;
+                if (comparison.added.length === 0 && comparison.removed.length === 0) sameCount++;
+            });
+
+            document.getElementById('summaryBar').innerHTML = `
+                <div class="summary-item">Total: <strong>${total}</strong></div>
+                ${Object.entries(conditions).map(([k, v]) =>
+                    `<div class="summary-item">${k}: <strong>${v}</strong></div>`
+                ).join('')}
+                <div class="summary-item">Added strategies: <strong>${addedCount}</strong></div>
+                <div class="summary-item">No change: <strong>${sameCount}</strong></div>
+            `;
+        }
+
+        // Event listeners
+        document.getElementById('conditionFilter').addEventListener('change', renderCards);
+        document.getElementById('changeFilter').addEventListener('change', renderCards);
+        document.getElementById('searchInput').addEventListener('input', renderCards);
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+condition,N,Mean,SD,Min,Max,Median
+with_llm,99,81.0434,18.6646,22.2,100.0,88.9
+with_llm_extended,100,79.902,19.7675,0.0,100.0,88.9
+without_llm,97,79.1649,22.2357,11.1,100.0,88.9

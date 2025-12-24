@@ -1,0 +1,29 @@
+======================================================================
+STATISTICAL ANALYSIS REPORT: Quiz Accuracy by Condition
+Generated: 2025-12-23 13:02:52
+======================================================================
+
+## Design
+- IV: Condition (between-subjects, 3 levels)
+- DV: Quiz Accuracy (continuous, 0-1 scale)
+- Analysis: One-way ANOVA
+
+## Descriptive Statistics
+                     N     Mean       SD   Min    Max  Median
+condition                                                    
+with_llm            99  81.0434  18.6646  22.2  100.0    88.9
+with_llm_extended  100  79.9020  19.7675   0.0  100.0    88.9
+without_llm         97  79.1649  22.2357  11.1  100.0    88.9
+
+## Assumption Checks
+- Normality (Shapiro-Wilk): Violated
+- Homogeneity (Levene): Satisfied
+
+## ANOVA Results
+- F = 0.2142
+- p = 0.8073
+- η² = 0.0015
+- Significant: No
+
+## Conclusion
+No statistically significant difference in quiz accuracy was found across conditions.

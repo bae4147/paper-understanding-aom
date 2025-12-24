@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
 """
 Firebase Data Export Script
-- Fetches all experiment data from Firebase
+- Fetches experiment data from Firebase within specified time range
 - Saves raw JSON data
-- Converts to CSV for analysis
+- Converts to normalized CSV files matching reference structure
+
+Data Collection Rules:
+- Time range: 19 Dec 2025 13:30 ET ~ 23 Dec 2025 19:30 ET
+- US/UK cutoff: 21 Dec 2025 18:58 ET (last US participant start time)
+- Only includes experiments with createdAt within the time range
+
+Output files:
+- participants.csv: participant info, demographics, AI usage
+- sessions.csv: experiment metadata with related IDs
+- reading_summary.csv: focusTimes, classification summaries
+- reading_events.csv: individual event logs
+- quizzes.csv: quiz answers per question
+- post_surveys.csv: NASA-TLX, self-efficacy, LLM trust/usefulness
+- llm_interactions.csv: LLM summary (totalQueries, avgResponseTime)
+- llm_messages.csv: Q&A pairs
 
 Usage:
-    python export_firebase_data.py                          # Export all data
-    python export_firebase_data.py --after "2025-12-20 03:30"  # Export data after specific datetime
-    python export_firebase_data.py --today                  # Export only today's data
+    python export_firebase_data.py                          # Export data within time range
+    python export_firebase_data.py --all                    # Export ALL data (no time filter)
 """
 
 import json
@@ -18,17 +32,27 @@ import argparse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+# Eastern Time (UTC-5, standard time)
+ET = timezone(timedelta(hours=-5))
+
 # Korea Standard Time (UTC+9)
 KST = timezone(timedelta(hours=9))
+
+# === DATA COLLECTION TIME RANGE (ET) ===
+# Experiment period: 19 Dec 2025 13:30 ET ~ 23 Dec 2025 19:30 ET
+START_TIME = datetime(2025, 12, 19, 13, 30, 0, tzinfo=ET)
+END_TIME = datetime(2025, 12, 23, 19, 30, 0, tzinfo=ET)
+
+# US/UK cutoff: 21 Dec 2025 18:58 ET (last US participant start time)
+UK_CUTOFF = datetime(2025, 12, 21, 18, 58, 0, tzinfo=ET)
 
 # Firebase Admin SDK
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Initialize Firebase
+
 def init_firebase():
     """Initialize Firebase Admin SDK"""
-    # Look for service account key in multiple locations
     possible_paths = [
         'firebase-service-account.json',
         'scripts/firebase-service-account.json',
@@ -59,9 +83,18 @@ def init_firebase():
         return None
 
 
-def get_experiment_datetime(exp_data):
-    """Extract datetime from experiment data for filtering (returns KST aware datetime)"""
-    # Try various timestamp fields
+def get_experiment_datetime(exp_data, target_tz=None):
+    """Extract datetime from experiment data for filtering
+
+    Args:
+        exp_data: experiment data dict
+        target_tz: target timezone to convert to (default: KST)
+
+    Returns:
+        datetime in target timezone, or None if no timestamp found
+    """
+    if target_tz is None:
+        target_tz = KST
 
     # Try preTask.completedAt (ISO string)
     if exp_data.get('preTask', {}).get('completedAt'):
@@ -69,8 +102,7 @@ def get_experiment_datetime(exp_data):
         if isinstance(ts_str, str):
             try:
                 dt = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
-                # Convert to KST
-                return dt.astimezone(KST)
+                return dt.astimezone(target_tz)
             except:
                 pass
 
@@ -79,54 +111,77 @@ def get_experiment_datetime(exp_data):
         ts = exp_data['readingStartedAt']
         if hasattr(ts, 'timestamp'):
             dt = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc)
-            return dt.astimezone(KST)
+            return dt.astimezone(target_tz)
 
     # Try updatedAt (Firestore Timestamp)
     if exp_data.get('updatedAt'):
         ts = exp_data['updatedAt']
         if hasattr(ts, 'timestamp'):
             dt = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc)
-            return dt.astimezone(KST)
+            return dt.astimezone(target_tz)
 
     return None
 
 
-def fetch_all_experiments(db, after_datetime=None):
-    """Fetch all experiment data from Firebase
+def get_country(exp_data):
+    """Determine country based on experiment datetime
+
+    Returns 'UK' if after 21 Dec 2025 19:32 ET, otherwise 'US'
+    """
+    exp_dt = get_experiment_datetime(exp_data, target_tz=ET)
+    if exp_dt is None:
+        return 'unknown'
+
+    if exp_dt >= UK_CUTOFF:
+        return 'UK'
+    else:
+        return 'US'
+
+
+def fetch_all_experiments(db, use_time_filter=True):
+    """Fetch experiment data from Firebase
 
     Args:
         db: Firestore client
-        after_datetime: Optional datetime to filter experiments created after this time
+        use_time_filter: If True, only fetch experiments within START_TIME ~ END_TIME range
     """
-    if after_datetime:
-        print(f"Fetching experiments after {after_datetime}...")
+    if use_time_filter:
+        print(f"Fetching experiments within time range:")
+        print(f"  Start: {START_TIME.strftime('%Y-%m-%d %H:%M')} ET")
+        print(f"  End:   {END_TIME.strftime('%Y-%m-%d %H:%M')} ET")
     else:
-        print("Fetching all experiments from Firebase...")
+        print("Fetching ALL experiments from Firebase (no time filter)...")
 
     all_data = []
     users_ref = db.collection('users')
     users = users_ref.stream()
 
     user_count = 0
-    filtered_count = 0
+    filtered_out_before = 0
+    filtered_out_after = 0
 
     for user_doc in users:
         user_count += 1
         user_id = user_doc.id
         user_data = user_doc.to_dict()
 
-        # Get all experiments for this user
         experiments_ref = users_ref.document(user_id).collection('experiments')
         experiments = experiments_ref.stream()
 
         for exp_doc in experiments:
             exp_data = exp_doc.to_dict()
 
-            # Apply datetime filter if specified
-            if after_datetime:
-                exp_dt = get_experiment_datetime(exp_data)
-                if not exp_dt or exp_dt < after_datetime:
-                    filtered_count += 1
+            if use_time_filter:
+                exp_dt = get_experiment_datetime(exp_data, target_tz=ET)
+                if not exp_dt:
+                    # No timestamp found, skip
+                    filtered_out_before += 1
+                    continue
+                if exp_dt < START_TIME:
+                    filtered_out_before += 1
+                    continue
+                if exp_dt > END_TIME:
+                    filtered_out_after += 1
                     continue
 
             exp_data['_userId'] = user_id
@@ -134,10 +189,9 @@ def fetch_all_experiments(db, after_datetime=None):
             exp_data['_userStatus'] = user_data.get('status', 'unknown')
             all_data.append(exp_data)
 
-    if after_datetime:
-        print(f"  Found {user_count} users, {len(all_data)} experiments after filter (filtered out {filtered_count})")
-    else:
-        print(f"  Found {user_count} users, {len(all_data)} experiments")
+    print(f"  Found {user_count} users, {len(all_data)} experiments within range")
+    if use_time_filter:
+        print(f"  Filtered out: {filtered_out_before} before start, {filtered_out_after} after end")
     return all_data
 
 
@@ -154,321 +208,311 @@ def save_raw_json(data, output_dir):
     return filepath
 
 
-def flatten_dict(d, parent_key='', sep='_'):
-    """Flatten nested dictionary"""
-    items = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        elif isinstance(v, list):
-            # Convert list to string representation
-            items.append((new_key, json.dumps(v, default=str)))
-        else:
-            items.append((new_key, v))
-    return dict(items)
+def write_csv(filepath, rows, fieldnames=None):
+    """Helper to write CSV file"""
+    if not rows:
+        return False
+
+    if fieldnames is None:
+        fieldnames = list(rows[0].keys())
+
+    with open(filepath, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"  Saved: {filepath} ({len(rows)} rows)")
+    return True
+
+
+def normalize_participant_id(pid):
+    """Normalize participant ID by removing @auth.prolific.com suffix if present"""
+    if pid and '@auth.prolific.com' in pid:
+        return pid.replace('@auth.prolific.com', '')
+    return pid
 
 
 def convert_to_csv(data, output_dir):
-    """Convert experiment data to multiple CSV files"""
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    """Convert experiment data to normalized CSV files matching reference structure"""
 
-    # 1. Main experiment summary CSV
-    main_rows = []
-    for exp in data:
-        row = {
-            'participantId': exp.get('participantId'),
-            'experimentId': exp.get('experimentId'),
+    # Filter to only completed experiments
+    completed_data = [exp for exp in data if exp.get('status') == 'completed']
+    excluded_count = len(data) - len(completed_data)
+    if excluded_count > 0:
+        print(f"  Excluding {excluded_count} non-completed sessions (abandoned/in_progress)")
+
+    # Track unique participants for participants.csv (from completed sessions only)
+    # Key: normalized participant ID, Value: experiment data
+    participants = {}
+
+    # === 1. sessions.csv (completed only) ===
+    sessions_rows = []
+    for exp in completed_data:
+        pid_raw = exp.get('participantId')
+        pid = normalize_participant_id(pid_raw)  # Normalize for matching
+        session_id = exp.get('experimentId', exp.get('_experimentDocId'))
+
+        # Store participant info (use normalized ID as key)
+        # Since we're iterating over completed_data only, all sessions here are completed
+        if pid and pid not in participants:
+            participants[pid] = exp
+
+        sessions_rows.append({
+            'participantId': pid,
+            'session_id': session_id,
             'condition': exp.get('condition'),
             'paper': exp.get('paper'),
             'status': exp.get('status'),
             'mode': exp.get('mode'),
+            'createdAt': exp.get('preTask', {}).get('completedAt'),
+            'completedAt': exp.get('postStudySurvey', {}).get('surveyCompletedAt'),
+            'reading_id': f"{session_id}_reading" if exp.get('reading') else '',
+            'quiz_id': f"{session_id}_quiz" if exp.get('quiz') else '',
+            'llm_interaction_id': f"{session_id}_llm" if exp.get('llmInteraction', {}).get('messages') else '',
+        })
 
-            # Pre-task
-            'preTask_strategies': json.dumps(exp.get('preTask', {}).get('strategies', []), default=str),
-            'preTask_confidence': exp.get('preTask', {}).get('confidence'),
-            'preTask_approachClarity': exp.get('preTask', {}).get('approachClarity'),
-            'preTask_challenges': exp.get('preTask', {}).get('challenges'),
-            'preTask_completedAt': exp.get('preTask', {}).get('completedAt'),
+    write_csv(os.path.join(output_dir, 'sessions.csv'), sessions_rows)
 
-            # Reading
-            'reading_duration': exp.get('reading', {}).get('duration'),
-            'reading_totalEvents': exp.get('reading', {}).get('totalEvents'),
-            'reading_focusTimes_reading': exp.get('reading', {}).get('focusTimes', {}).get('reading'),
-            'reading_focusTimes_chat': exp.get('reading', {}).get('focusTimes', {}).get('chat'),
-            'reading_focusTimes_audio': exp.get('reading', {}).get('focusTimes', {}).get('audio'),
-            'reading_focusTimes_video': exp.get('reading', {}).get('focusTimes', {}).get('video'),
-            'reading_focusTimes_infographics': exp.get('reading', {}).get('focusTimes', {}).get('infographics'),
-            'reading_focusTimes_simplified': exp.get('reading', {}).get('focusTimes', {}).get('simplified'),
-            'reading_focusTimes_quiz': exp.get('reading', {}).get('focusTimes', {}).get('quiz'),
-            'reading_classification_reading_count': exp.get('reading', {}).get('classificationSummary', {}).get('reading', {}).get('count'),
-            'reading_classification_reading_duration': exp.get('reading', {}).get('classificationSummary', {}).get('reading', {}).get('totalDuration'),
-            'reading_classification_scanning_count': exp.get('reading', {}).get('classificationSummary', {}).get('scanning', {}).get('count'),
-            'reading_classification_scanning_duration': exp.get('reading', {}).get('classificationSummary', {}).get('scanning', {}).get('totalDuration'),
-            'reading_classification_scrolling_count': exp.get('reading', {}).get('classificationSummary', {}).get('scrolling', {}).get('count'),
-            'reading_classification_scrolling_duration': exp.get('reading', {}).get('classificationSummary', {}).get('scrolling', {}).get('totalDuration'),
+    # === 2. participants.csv ===
+    participants_rows = []
+    for pid, exp in participants.items():
+        survey = exp.get('postStudySurvey', {})
+        demographics = survey.get('demographics', {})
+        ai_usage = survey.get('aiUsage', {})
 
-            # LLM Interaction (for with_llm conditions)
-            'llmInteraction_totalQueries': exp.get('llmInteraction', {}).get('totalQueries'),
+        participants_rows.append({
+            'participantId': pid,
+            'condition': exp.get('condition'),
+            'country': get_country(exp),
+            # Demographics
+            'demographics_age': demographics.get('age'),
+            'demographics_gender': demographics.get('gender'),
+            'demographics_education': demographics.get('education'),
+            'demographics_workingSituation': demographics.get('workingSituation'),
+            'demographics_workHoursPerWeek': demographics.get('workHoursPerWeek'),
+            'demographics_yearsInOrganization': demographics.get('yearsInOrganization'),
+            'demographics_yearsInJob': demographics.get('yearsInJob'),
+            'demographics_jobTitle': demographics.get('jobTitle'),
+            'demographics_industry': demographics.get('industry'),
+            'demographics_ethnicity': json.dumps(demographics.get('ethnicity', []), ensure_ascii=False) if demographics.get('ethnicity') else '',
+            'demographics_englishProficiency': demographics.get('englishProficiency'),
+            # AI Usage
+            'aiUsage_frequency': ai_usage.get('frequency'),
+            'aiUsage_toolsUsed': ai_usage.get('toolsUsed'),
+            'aiUsage_purposes': json.dumps(ai_usage.get('purposes', []), ensure_ascii=False) if ai_usage.get('purposes') else '',
+        })
 
-            # Extended Resources (for with_llm_extended)
-            'extendedResources_audioInteractions': exp.get('extendedResources', {}).get('audioInteractions'),
-            'extendedResources_videoInteractions': exp.get('extendedResources', {}).get('videoInteractions'),
-            'extendedResources_tabSwitchCount': exp.get('extendedResources', {}).get('tabSwitchCount'),
+    write_csv(os.path.join(output_dir, 'participants.csv'), participants_rows)
 
-            # Quiz
-            'quiz_correctCount': exp.get('quiz', {}).get('correctCount'),
-            'quiz_notSureCount': exp.get('quiz', {}).get('notSureCount'),
-            'quiz_totalQuestions': exp.get('quiz', {}).get('totalQuestions'),
-            'quiz_accuracy': exp.get('quiz', {}).get('accuracy'),
-            'quiz_confidence': exp.get('quiz', {}).get('confidence'),
-            'quiz_duration': exp.get('quiz', {}).get('duration'),
+    # === 3. reading_summary.csv ===
+    reading_summary_rows = []
+    for exp in completed_data:
+        reading = exp.get('reading', {})
+        if not reading:
+            continue
 
-            # Post-task
-            'postTask_strategies': json.dumps(exp.get('postTask', {}).get('strategies', []), default=str),
-            'postTask_thinkingChange': exp.get('postTask', {}).get('thinkingChange'),
-            'postTask_newStrategyConfidence': exp.get('postTask', {}).get('newStrategyConfidence'),
-            'postTask_implementationLikelihood': exp.get('postTask', {}).get('implementationLikelihood'),
-            'postTask_completedAt': exp.get('postTask', {}).get('completedAt'),
+        session_id = exp.get('experimentId', exp.get('_experimentDocId'))
+        focus_times = reading.get('focusTimes', {})
+        cls_summary = reading.get('classificationSummary', {})
 
-            # Post-study Survey - NASA-TLX
-            'survey_nasaTLX_mentalDemand': exp.get('postStudySurvey', {}).get('nasaTLX', {}).get('mentalDemand'),
-            'survey_nasaTLX_physicalDemand': exp.get('postStudySurvey', {}).get('nasaTLX', {}).get('physicalDemand'),
-            'survey_nasaTLX_temporalDemand': exp.get('postStudySurvey', {}).get('nasaTLX', {}).get('temporalDemand'),
-            'survey_nasaTLX_performance': exp.get('postStudySurvey', {}).get('nasaTLX', {}).get('performance'),
-            'survey_nasaTLX_effort': exp.get('postStudySurvey', {}).get('nasaTLX', {}).get('effort'),
-            'survey_nasaTLX_frustration': exp.get('postStudySurvey', {}).get('nasaTLX', {}).get('frustration'),
+        reading_summary_rows.append({
+            'participantId': normalize_participant_id(exp.get('participantId')),
+            'session_id': session_id,
+            'reading_id': f"{session_id}_reading",
+            'totalEvents': reading.get('totalEvents'),
+            'duration': reading.get('duration'),
+            # Focus times
+            'focusTime_reading': focus_times.get('reading'),
+            'focusTime_chat': focus_times.get('chat'),
+            'focusTime_audio': focus_times.get('audio'),
+            'focusTime_video': focus_times.get('video'),
+            'focusTime_infographics': focus_times.get('infographics'),
+            'focusTime_simplified': focus_times.get('simplified'),
+            'focusTime_quiz': focus_times.get('quiz'),
+            # Classification summary
+            'reading_count': cls_summary.get('reading', {}).get('count'),
+            'reading_totalDuration': cls_summary.get('reading', {}).get('totalDuration'),
+            'scanning_count': cls_summary.get('scanning', {}).get('count'),
+            'scanning_totalDuration': cls_summary.get('scanning', {}).get('totalDuration'),
+            'scrolling_count': cls_summary.get('scrolling', {}).get('count'),
+            'scrolling_totalDuration': cls_summary.get('scrolling', {}).get('totalDuration'),
+        })
 
-            # Post-study Survey - Self-efficacy
-            'survey_selfEfficacy_overallGoal': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('overallComprehension', {}).get('overallGoal'),
-            'survey_selfEfficacy_authorsReasoning': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('overallComprehension', {}).get('authorsReasoning'),
-            'survey_selfEfficacy_connectingIdeas': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('overallComprehension', {}).get('connectingIdeas'),
-            'survey_selfEfficacy_ownIdeas': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('criticalEngagement', {}).get('ownIdeas'),
-            'survey_selfEfficacy_alternativePerspectives': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('criticalEngagement', {}).get('alternativePerspectives'),
-            'survey_selfEfficacy_verifyCredibility': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('criticalEngagement', {}).get('verifyCredibility'),
-            'survey_selfEfficacy_questionClaims': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('criticalEngagement', {}).get('questionClaims'),
-            'survey_selfEfficacy_broaderImplications': exp.get('postStudySurvey', {}).get('selfEfficacy', {}).get('criticalEngagement', {}).get('broaderImplications'),
+    write_csv(os.path.join(output_dir, 'reading_summary.csv'), reading_summary_rows)
 
-            # Post-study Survey - LLM Usefulness (for with_llm conditions)
-            'survey_llmUsefulness_overall': exp.get('postStudySurvey', {}).get('llmUsefulness', {}).get('overall'),
-            'survey_llmUsefulness_conceptHelp': exp.get('postStudySurvey', {}).get('llmUsefulness', {}).get('conceptHelp'),
-            'survey_llmUsefulness_findingsHelp': exp.get('postStudySurvey', {}).get('llmUsefulness', {}).get('findingsHelp'),
-            'survey_llmUsefulness_practicalHelp': exp.get('postStudySurvey', {}).get('llmUsefulness', {}).get('practicalHelp'),
-            'survey_llmUsefulness_timeSaving': exp.get('postStudySurvey', {}).get('llmUsefulness', {}).get('timeSaving'),
-
-            # Post-study Survey - LLM Trust (for with_llm conditions)
-            'survey_llmTrust_competence': exp.get('postStudySurvey', {}).get('llmTrust', {}).get('competence'),
-            'survey_llmTrust_accuracy': exp.get('postStudySurvey', {}).get('llmTrust', {}).get('accuracy'),
-            'survey_llmTrust_benevolence': exp.get('postStudySurvey', {}).get('llmTrust', {}).get('benevolence'),
-            'survey_llmTrust_reliability': exp.get('postStudySurvey', {}).get('llmTrust', {}).get('reliability'),
-            'survey_llmTrust_comfortActing': exp.get('postStudySurvey', {}).get('llmTrust', {}).get('comfortActing'),
-            'survey_llmTrust_comfortUsing': exp.get('postStudySurvey', {}).get('llmTrust', {}).get('comfortUsing'),
-
-            # Post-study Survey - AI Usage
-            'survey_aiUsage_frequency': exp.get('postStudySurvey', {}).get('aiUsage', {}).get('frequency'),
-            'survey_aiUsage_toolsUsed': exp.get('postStudySurvey', {}).get('aiUsage', {}).get('toolsUsed'),
-            'survey_aiUsage_purposes': json.dumps(exp.get('postStudySurvey', {}).get('aiUsage', {}).get('purposes', []), default=str),
-
-            # Post-study Survey - Demographics
-            'survey_demographics_age': exp.get('postStudySurvey', {}).get('demographics', {}).get('age'),
-            'survey_demographics_gender': exp.get('postStudySurvey', {}).get('demographics', {}).get('gender'),
-            'survey_demographics_workingSituation': exp.get('postStudySurvey', {}).get('demographics', {}).get('workingSituation'),
-            'survey_demographics_workHoursPerWeek': exp.get('postStudySurvey', {}).get('demographics', {}).get('workHoursPerWeek'),
-            'survey_demographics_yearsInOrganization': exp.get('postStudySurvey', {}).get('demographics', {}).get('yearsInOrganization'),
-            'survey_demographics_yearsInJob': exp.get('postStudySurvey', {}).get('demographics', {}).get('yearsInJob'),
-            'survey_demographics_jobTitle': exp.get('postStudySurvey', {}).get('demographics', {}).get('jobTitle'),
-            'survey_demographics_industry': exp.get('postStudySurvey', {}).get('demographics', {}).get('industry'),
-            'survey_demographics_ethnicity': json.dumps(exp.get('postStudySurvey', {}).get('demographics', {}).get('ethnicity', []), default=str),
-            'survey_demographics_education': exp.get('postStudySurvey', {}).get('demographics', {}).get('education'),
-            'survey_demographics_englishProficiency': exp.get('postStudySurvey', {}).get('demographics', {}).get('englishProficiency'),
-
-            # Post-study Survey - Attention Check
-            'survey_attentionCheck_focus': exp.get('postStudySurvey', {}).get('attentionCheck', {}).get('focus'),
-            'survey_attentionCheck_stronglyDisagreeCheck': exp.get('postStudySurvey', {}).get('attentionCheck', {}).get('stronglyDisagreeCheck'),
-
-            # Post-study Survey - Feedback
-            'survey_studyFeedback': exp.get('postStudySurvey', {}).get('studyFeedback'),
-            'survey_completedAt': exp.get('postStudySurvey', {}).get('surveyCompletedAt'),
-        }
-        main_rows.append(row)
-
-    # Save main CSV
-    main_filename = f"experiments_main_{timestamp}.csv"
-    main_filepath = os.path.join(output_dir, main_filename)
-
-    if main_rows:
-        with open(main_filepath, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=main_rows[0].keys())
-            writer.writeheader()
-            writer.writerows(main_rows)
-        print(f"  Saved main CSV: {main_filepath}")
-
-    # 2. Quiz answers CSV
-    quiz_rows = []
-    for exp in data:
-        if exp.get('quiz', {}).get('answers'):
-            for q_id, answer in exp.get('quiz', {}).get('answers', {}).items():
-                grading = exp.get('quiz', {}).get('gradingDetails', {}).get(q_id, {})
-                quiz_rows.append({
-                    'participantId': exp.get('participantId'),
-                    'experimentId': exp.get('experimentId'),
-                    'condition': exp.get('condition'),
-                    'questionId': q_id,
-                    'userAnswer': answer,
-                    'correctAnswer': grading.get('correctAnswer'),
-                    'isCorrect': grading.get('isCorrect'),
-                    'isNotSure': grading.get('isNotSure'),
-                })
-
-    if quiz_rows:
-        quiz_filename = f"quiz_answers_{timestamp}.csv"
-        quiz_filepath = os.path.join(output_dir, quiz_filename)
-        with open(quiz_filepath, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=quiz_rows[0].keys())
-            writer.writeheader()
-            writer.writerows(quiz_rows)
-        print(f"  Saved quiz CSV: {quiz_filepath}")
-
-    # 3. LLM chat history CSV
-    chat_rows = []
-    for exp in data:
-        if exp.get('llmInteraction', {}).get('messages'):
-            for i, msg in enumerate(exp.get('llmInteraction', {}).get('messages', [])):
-                chat_rows.append({
-                    'participantId': exp.get('participantId'),
-                    'experimentId': exp.get('experimentId'),
-                    'condition': exp.get('condition'),
-                    'messageIndex': i,
-                    'role': msg.get('role'),
-                    'content': msg.get('content'),
-                    'timestamp': msg.get('timestamp'),
-                })
-
-    if chat_rows:
-        chat_filename = f"llm_chat_history_{timestamp}.csv"
-        chat_filepath = os.path.join(output_dir, chat_filename)
-        with open(chat_filepath, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=chat_rows[0].keys())
-            writer.writeheader()
-            writer.writerows(chat_rows)
-        print(f"  Saved chat CSV: {chat_filepath}")
-
-    # 4. Reading events CSV (optional - can be large)
+    # === 4. reading_events.csv ===
     events_rows = []
-    for exp in data:
-        if exp.get('reading', {}).get('events'):
-            for event in exp.get('reading', {}).get('events', []):
-                events_rows.append({
-                    'participantId': exp.get('participantId'),
-                    'experimentId': exp.get('experimentId'),
-                    'condition': exp.get('condition'),
-                    'eventId': event.get('eventId'),
-                    'eventType': event.get('eventType'),
-                    'timestamp': event.get('timestamp'),
-                    'phase': event.get('phase'),
-                    'classification': event.get('classification'),
-                    'pauseDuration': event.get('pauseDuration'),
-                    'scrollDuration': event.get('scrollDuration'),
-                    'sectionBeforeScroll': event.get('sectionBeforeScroll'),
-                    'sectionAfterScroll': event.get('sectionAfterScroll'),
-                    'scrollDirection': event.get('scrollDirection'),
-                    'scrollDistance': event.get('scrollDistance'),
-                    'from': event.get('from'),
-                    'to': event.get('to'),
-                })
+    for exp in completed_data:
+        events = exp.get('reading', {}).get('events', [])
+        session_id = exp.get('experimentId', exp.get('_experimentDocId'))
 
-    if events_rows:
-        events_filename = f"reading_events_{timestamp}.csv"
-        events_filepath = os.path.join(output_dir, events_filename)
-        with open(events_filepath, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=events_rows[0].keys())
-            writer.writeheader()
-            writer.writerows(events_rows)
-        print(f"  Saved events CSV: {events_filepath}")
+        for event in events:
+            events_rows.append({
+                'participantId': normalize_participant_id(exp.get('participantId')),
+                'session_id': session_id,
+                'eventId': event.get('eventId'),
+                'timestamp': event.get('timestamp'),
+                'eventType': event.get('eventType'),
+                'phase': event.get('phase'),
+                'classification': event.get('classification'),
+                'pauseDuration': event.get('pauseDuration'),
+                'scrollDuration': event.get('scrollDuration'),
+                'sectionBeforeScroll': event.get('sectionBeforeScroll'),
+                'sectionAfterScroll': event.get('sectionAfterScroll'),
+                'scrollDirection': event.get('scrollDirection'),
+                'scrollDistance': event.get('scrollDistance'),
+                'from': event.get('from'),
+                'to': event.get('to'),
+                'duration': event.get('duration'),
+                'currentTime': event.get('currentTime'),
+            })
 
-    return main_filepath
+    write_csv(os.path.join(output_dir, 'reading_events.csv'), events_rows)
 
+    # === 5. quizzes.csv ===
+    quizzes_rows = []
+    for exp in completed_data:
+        quiz = exp.get('quiz', {})
+        if not quiz.get('answers'):
+            continue
 
-def check_data_completeness(data):
-    """Check which fields are missing or incomplete"""
-    print("\n" + "="*60)
-    print("DATA COMPLETENESS CHECK")
-    print("="*60)
+        session_id = exp.get('experimentId', exp.get('_experimentDocId'))
+        answers = quiz.get('answers', {})
+        grading = quiz.get('gradingDetails', {})
 
-    # Define expected fields by section
-    expected_fields = {
-        'preTask': ['strategies', 'confidence', 'approachClarity', 'challenges', 'completedAt'],
-        'reading': ['duration', 'events', 'focusTimes', 'classificationSummary', 'completedAt'],
-        'quiz': ['answers', 'confidence', 'duration', 'gradingDetails', 'correctCount', 'accuracy', 'submittedAt'],
-        'postTask': ['strategies', 'thinkingChange', 'newStrategyConfidence', 'implementationLikelihood', 'completedAt'],
-        'postStudySurvey.nasaTLX': ['mentalDemand', 'physicalDemand', 'temporalDemand', 'performance', 'effort', 'frustration'],
-        'postStudySurvey.selfEfficacy.overallComprehension': ['overallGoal', 'authorsReasoning', 'connectingIdeas'],
-        'postStudySurvey.selfEfficacy.criticalEngagement': ['ownIdeas', 'alternativePerspectives', 'verifyCredibility', 'questionClaims', 'broaderImplications'],
-        'postStudySurvey.aiUsage': ['frequency', 'toolsUsed', 'purposes'],
-        'postStudySurvey.demographics': ['age', 'gender', 'workingSituation', 'workHoursPerWeek', 'yearsInOrganization', 'yearsInJob', 'jobTitle', 'industry', 'ethnicity', 'education', 'englishProficiency'],
-        'postStudySurvey.attentionCheck': ['focus', 'stronglyDisagreeCheck'],
-    }
+        # Create a row with all answers as columns
+        row = {
+            'participantId': normalize_participant_id(exp.get('participantId')),
+            'session_id': session_id,
+            'quiz_id': f"{session_id}_quiz",
+            'condition': exp.get('condition'),
+            'paper': exp.get('paper'),
+            'duration': quiz.get('duration'),
+            'total_questions': quiz.get('totalQuestions'),
+            'correct_count': quiz.get('correctCount'),
+            'not_sure_count': quiz.get('notSureCount'),
+            'accuracy': quiz.get('accuracy'),
+            'confidence': quiz.get('confidence'),
+        }
 
-    # LLM-specific fields
-    llm_fields = {
-        'llmInteraction': ['messages', 'totalQueries'],
-        'postStudySurvey.llmUsefulness': ['overall', 'conceptHelp', 'findingsHelp', 'practicalHelp', 'timeSaving'],
-        'postStudySurvey.llmTrust': ['competence', 'accuracy', 'benevolence', 'reliability', 'comfortActing', 'comfortUsing'],
-    }
+        # Add individual answers
+        for i in range(1, 13):  # Assuming max 12 questions
+            q_key = f"q{i}"
+            row[f'answer_{i}'] = answers.get(q_key, '')
+            row[f'correct_{i}'] = grading.get(q_key, {}).get('isCorrect', '')
 
-    # Extended fields
-    extended_fields = {
-        'extendedResources': ['audioInteractions', 'videoInteractions', 'tabSwitchCount', 'inTabQuizAnswers'],
-    }
+        quizzes_rows.append(row)
 
-    for exp in data:
-        pid = exp.get('participantId', 'Unknown')
-        condition = exp.get('condition', 'Unknown')
-        status = exp.get('status', 'Unknown')
+    write_csv(os.path.join(output_dir, 'quizzes.csv'), quizzes_rows)
 
-        print(f"\n--- {pid} ({condition}) - Status: {status} ---")
+    # === 6. post_surveys.csv ===
+    surveys_rows = []
+    for exp in completed_data:
+        survey = exp.get('postStudySurvey', {})
+        if not survey:
+            continue
 
-        missing = []
+        session_id = exp.get('experimentId', exp.get('_experimentDocId'))
+        nasa = survey.get('nasaTLX', {})
+        self_eff = survey.get('selfEfficacy', {})
+        overall_comp = self_eff.get('overallComprehension', {})
+        critical = self_eff.get('criticalEngagement', {})
+        llm_use = survey.get('llmUsefulness', {})
+        llm_trust = survey.get('llmTrust', {})
+        attention = survey.get('attentionCheck', {})
 
-        # Check common fields
-        for section, fields in expected_fields.items():
-            parts = section.split('.')
-            obj = exp
-            for part in parts:
-                obj = obj.get(part, {}) if obj else {}
+        surveys_rows.append({
+            'participantId': normalize_participant_id(exp.get('participantId')),
+            'session_id': session_id,
+            'condition': exp.get('condition'),
+            # NASA-TLX
+            'nasaTLX_mentalDemand': nasa.get('mentalDemand'),
+            'nasaTLX_physicalDemand': nasa.get('physicalDemand'),
+            'nasaTLX_temporalDemand': nasa.get('temporalDemand'),
+            'nasaTLX_performance': nasa.get('performance'),
+            'nasaTLX_effort': nasa.get('effort'),
+            'nasaTLX_frustration': nasa.get('frustration'),
+            # Self-efficacy - Overall Comprehension
+            'selfEfficacy_overallGoal': overall_comp.get('overallGoal'),
+            'selfEfficacy_authorsReasoning': overall_comp.get('authorsReasoning'),
+            'selfEfficacy_connectingIdeas': overall_comp.get('connectingIdeas'),
+            # Self-efficacy - Critical Engagement
+            'selfEfficacy_ownIdeas': critical.get('ownIdeas'),
+            'selfEfficacy_alternativePerspectives': critical.get('alternativePerspectives'),
+            'selfEfficacy_verifyCredibility': critical.get('verifyCredibility'),
+            'selfEfficacy_questionClaims': critical.get('questionClaims'),
+            'selfEfficacy_broaderImplications': critical.get('broaderImplications'),
+            # LLM Usefulness (for with_llm conditions)
+            'llmUsefulness_overall': llm_use.get('overall'),
+            'llmUsefulness_conceptHelp': llm_use.get('conceptHelp'),
+            'llmUsefulness_findingsHelp': llm_use.get('findingsHelp'),
+            'llmUsefulness_practicalHelp': llm_use.get('practicalHelp'),
+            'llmUsefulness_timeSaving': llm_use.get('timeSaving'),
+            # LLM Trust (for with_llm conditions)
+            'llmTrust_competence': llm_trust.get('competence'),
+            'llmTrust_accuracy': llm_trust.get('accuracy'),
+            'llmTrust_benevolence': llm_trust.get('benevolence'),
+            'llmTrust_reliability': llm_trust.get('reliability'),
+            'llmTrust_comfortActing': llm_trust.get('comfortActing'),
+            'llmTrust_comfortUsing': llm_trust.get('comfortUsing'),
+            # Attention Check
+            'attentionCheck_focus': attention.get('focus'),
+            'attentionCheck_stronglyDisagreeCheck': attention.get('stronglyDisagreeCheck'),
+            # Feedback
+            'studyFeedback': survey.get('studyFeedback'),
+            'completedAt': survey.get('surveyCompletedAt'),
+        })
 
-            for field in fields:
-                if obj.get(field) is None:
-                    missing.append(f"{section}.{field}")
+    write_csv(os.path.join(output_dir, 'post_surveys.csv'), surveys_rows)
 
-        # Check LLM fields if with_llm condition
-        if condition in ['with_llm', 'with_llm_extended']:
-            for section, fields in llm_fields.items():
-                parts = section.split('.')
-                obj = exp
-                for part in parts:
-                    obj = obj.get(part, {}) if obj else {}
+    # === 7. llm_interactions.csv ===
+    llm_interactions_rows = []
+    for exp in completed_data:
+        llm = exp.get('llmInteraction', {})
+        messages = llm.get('messages', [])
+        if not messages:
+            continue
 
-                for field in fields:
-                    if obj.get(field) is None:
-                        missing.append(f"{section}.{field}")
+        session_id = exp.get('experimentId', exp.get('_experimentDocId'))
 
-        # Check extended fields if with_llm_extended condition
-        if condition == 'with_llm_extended':
-            for section, fields in extended_fields.items():
-                obj = exp.get(section, {})
-                for field in fields:
-                    if obj.get(field) is None:
-                        missing.append(f"{section}.{field}")
+        # Calculate average response time
+        response_times = [m.get('responseTime', 0) for m in messages if m.get('responseTime')]
+        avg_response_time = sum(response_times) / len(response_times) if response_times else 0
 
-        if missing:
-            print(f"  MISSING ({len(missing)}):")
-            for m in missing:
-                print(f"    - {m}")
-        else:
-            print("  All fields present!")
+        llm_interactions_rows.append({
+            'participantId': normalize_participant_id(exp.get('participantId')),
+            'session_id': session_id,
+            'llm_interaction_id': f"{session_id}_llm",
+            'totalQueries': llm.get('totalQueries', len(messages)),
+            'avgResponseTime': avg_response_time,
+        })
 
-    print("\n" + "="*60)
+    write_csv(os.path.join(output_dir, 'llm_interactions.csv'), llm_interactions_rows)
+
+    # === 8. llm_messages.csv ===
+    llm_messages_rows = []
+    for exp in completed_data:
+        messages = exp.get('llmInteraction', {}).get('messages', [])
+        if not messages:
+            continue
+
+        session_id = exp.get('experimentId', exp.get('_experimentDocId'))
+
+        for i, msg in enumerate(messages):
+            llm_messages_rows.append({
+                'participantId': normalize_participant_id(exp.get('participantId')),
+                'session_id': session_id,
+                'message_order': i + 1,
+                'question': msg.get('question', ''),
+                'answer': msg.get('answer', ''),
+                'questionTime': msg.get('questionTime', msg.get('timestamp')),
+                'answerTime': msg.get('answerTime'),
+                'responseTime': msg.get('responseTime'),
+            })
+
+    write_csv(os.path.join(output_dir, 'llm_messages.csv'), llm_messages_rows)
+
+    print(f"\n  Total: 8 CSV files created")
 
 
 def parse_args():
@@ -478,20 +522,20 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python export_firebase_data.py                              # Export all data
-  python export_firebase_data.py --after "2025-12-20 03:30"   # Export after datetime
-  python export_firebase_data.py --today                      # Export only today's data
+  python export_firebase_data.py                # Export data within time range (default)
+  python export_firebase_data.py --all          # Export ALL data (no time filter)
+  python export_firebase_data.py --raw-only     # Only save raw JSON (no CSV conversion)
         """
     )
     parser.add_argument(
-        '--after',
-        type=str,
-        help='Only export data after this datetime (format: "YYYY-MM-DD HH:MM" or "YYYY-MM-DD")'
+        '--all',
+        action='store_true',
+        help='Export ALL data without time range filter'
     )
     parser.add_argument(
-        '--today',
+        '--raw-only',
         action='store_true',
-        help='Only export data from today'
+        help='Only save raw JSON, skip CSV conversion'
     )
     return parser.parse_args()
 
@@ -499,33 +543,14 @@ Examples:
 def main():
     args = parse_args()
 
-    # Determine datetime filter
-    after_datetime = None
-    if args.today:
-        # Today at midnight KST
-        now_kst = datetime.now(KST)
-        after_datetime = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
-    elif args.after:
-        try:
-            # Try parsing with time (as KST)
-            after_datetime = datetime.strptime(args.after, '%Y-%m-%d %H:%M').replace(tzinfo=KST)
-        except ValueError:
-            try:
-                # Try parsing date only (as KST)
-                after_datetime = datetime.strptime(args.after, '%Y-%m-%d').replace(tzinfo=KST)
-            except ValueError:
-                print(f"ERROR: Invalid datetime format '{args.after}'.")
-                print("Use format: 'YYYY-MM-DD HH:MM' or 'YYYY-MM-DD'")
-                return
+    use_time_filter = not args.all
 
     print("="*60)
     print("FIREBASE DATA EXPORT")
-    if after_datetime:
-        print(f"Filter: after {after_datetime.strftime('%Y-%m-%d %H:%M')} KST")
     print("="*60)
 
     # Create output directory
-    output_dir = os.path.join(os.path.dirname(__file__), '..', 'data_exports')
+    output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed')
     os.makedirs(output_dir, exist_ok=True)
 
     # Initialize Firebase
@@ -534,7 +559,7 @@ def main():
         return
 
     # Fetch data
-    data = fetch_all_experiments(db, after_datetime=after_datetime)
+    data = fetch_all_experiments(db, use_time_filter=use_time_filter)
 
     if not data:
         print("No data found!")
@@ -542,18 +567,20 @@ def main():
 
     # Save raw JSON
     print("\nSaving raw JSON...")
-    save_raw_json(data, output_dir)
+    raw_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
+    os.makedirs(raw_dir, exist_ok=True)
+    save_raw_json(data, raw_dir)
 
-    # Convert to CSV
-    print("\nConverting to CSV...")
-    convert_to_csv(data, output_dir)
-
-    # Check completeness
-    check_data_completeness(data)
+    # Convert to CSV (unless --raw-only)
+    if not args.raw_only:
+        print("\nConverting to CSV...")
+        convert_to_csv(data, output_dir)
 
     print("\n" + "="*60)
     print("EXPORT COMPLETE")
-    print(f"Files saved to: {os.path.abspath(output_dir)}")
+    print(f"Raw JSON saved to: {os.path.abspath(raw_dir)}")
+    if not args.raw_only:
+        print(f"CSV files saved to: {os.path.abspath(output_dir)}")
     print("="*60)
 
 
