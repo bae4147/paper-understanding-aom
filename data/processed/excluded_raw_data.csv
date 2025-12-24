@@ -1,0 +1,24 @@
+participantId,original_participantId,status,exclusion_reason,condition,createdAt,experiment_count
+6761f75300af0601c94fb5fa,,abandoned,abandoned,without_llm,2025-12-22 11:07:32.233000+00:00,1
+5a8ff02e4fcb2f0001d8bb9b,,in_progress,in_progress,without_llm,2025-12-22 12:42:01.585000+00:00,1
+6148bbcd519a30b146897026,,in_progress,in_progress,with_llm_extended,2025-12-22 14:53:10.340000+00:00,1
+62dc4a5fef307ee53c61afcc,,in_progress,in_progress,with_llm,2025-12-21 22:50:18.006000+00:00,1
+64136034f020e6b765d0bc4c,,in_progress,in_progress,with_llm_extended,2025-12-22 09:19:22.801000+00:00,1
+6630fd6fc70f45525e94c657,,in_progress,in_progress,with_llm_extended,2025-12-19 19:41:15.258000+00:00,1
+664d8066db4407ac502a5979,,in_progress,in_progress,with_llm_extended,2025-12-20 02:20:45.301000+00:00,1
+6654847971e9e4d8aa4321eb,,in_progress,in_progress,with_llm_extended,2025-12-22 15:41:08.672000+00:00,1
+6658b831ee74fc67e629e041,,in_progress,in_progress,with_llm,2025-12-22 07:17:32.269000+00:00,1
+6658ccce522b5c7e8975311e,,in_progress,in_progress,without_llm,2025-12-22 08:43:59.112000+00:00,1
+668524a1a970340348138c93,,in_progress,in_progress,with_llm,2025-12-22 02:41:51.019000+00:00,1
+66f5617d6ea358aa9f275019,,in_progress,in_progress,without_llm,2025-12-22 15:09:30.846000+00:00,1
+671cf3faf9e7ffc0d41db198,,in_progress,in_progress,with_llm_extended,2025-12-22 14:40:14.583000+00:00,1
+6727964977929019f6ff8a5d,,in_progress,in_progress,with_llm,2025-12-22 06:25:47.910000+00:00,1
+673a596bdb0ad1f5359cf64b,,in_progress,in_progress,with_llm,2025-12-21 20:20:26.693000+00:00,1
+676083fbda0965892553cd66,,in_progress,in_progress,without_llm,2025-12-22 08:28:13.925000+00:00,1
+67854ba4bab6fc4b80eba268,,in_progress,in_progress,without_llm,2025-12-19 20:06:55.025000+00:00,1
+67a796cd3ddc2ecc4a26fa35,,in_progress,in_progress,without_llm,2025-12-20 20:12:59.901000+00:00,1
+67f32ac5f6a4ce3d9f9c697d,,in_progress,in_progress,without_llm,2025-12-19 19:31:05.374000+00:00,1
+694379e0e3296fe2c9f107a2,,in_progress,in_progress,with_llm,2025-12-20 18:59:13.579000+00:00,1
+6947c5c8b87439db043797d5,,in_progress,in_progress,with_llm,2025-12-21 17:09:56.118000+00:00,1
+C8D1FZR6,,completed,invalid_prolific_id,with_llm,2025-12-20 02:15:48.861000+00:00,1
+"Q1. Please list the specific strategies you used to make this meeting more effective. * Enter one strategy per field. Click ""Add Strategy"" to add more.  1. Strategy 1   Add Strategy How confident are you that these strategies improved the meeting's effectiveness? * Not at all confident 1 2 3 4 5 6 7 Extremely confident Q2. To what extent did you have a clear, intentional approach to running this meeting effectively? * No clear approach 1 2 3 4 5 6 7 Very clear and intentional Q3. Please briefly describe any challenges or difficulties you experienced during this meeting. * Continue to Reading →",,completed,invalid_prolific_id,without_llm,2025-12-20 12:23:34.707000+00:00,1

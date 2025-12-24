@@ -1,0 +1,121 @@
+카테고리,변수명,설명/설문문항,척도/형식
+"기본 정보 (참여자, 실험)",participantId,참가자 고유 ID (Prolific ID),String
+,experimentId,실험 세션 고유 ID,String
+,createdAt,실험 시작 시간 (ID 입력),DateTime
+,completedAt,실험 완료 시간,DateTime
+,country,참가자 국가,UK / US
+,condition,실험 조건,without_llm / with_llm / with_llm_extended
+,status,실험 완료 상태,completed
+,reading_id,읽기 세션 ID (매핑 목적),String
+,quiz_id,퀴즈 세션 ID (매핑 목적),String
+,review_id,리뷰 세션 ID (매핑 목적),String
+,llm_interaction_id,LLM 상호작용 세션 ID (매핑 목적),String
+,reading_reading_id,읽기 세션 ID (매핑 목적),String
+,surveyCompletedAt,설문 완료 시간,DateTime
+Pretask,pretask_strategy1,Pre-task: 회의 준비 전략 1,Open text
+,pretask_strategy2,Pre-task: 회의 준비 전략 2,Open text
+,pretask_strategy3,Pre-task: 회의 준비 전략 3,Open text
+,pretask_strategy4,Pre-task: 회의 준비 전략 4,Open text
+,pretask_strategy5,Pre-task: 회의 준비 전략 5,Open text
+,pretask_strategy6,Pre-task: 회의 준비 전략 6,Open text
+,pretask_strategy7,Pre-task: 회의 준비 전략 7,Open text
+,pretask_strategy8,Pre-task: 회의 준비 전략 8,Open text
+,pretask_strategy9,Pre-task: 회의 준비 전략 9,Open text
+,pretask_strategy10,Pre-task: 회의 준비 전략 10,Open text
+,pretask_confidence,How confident are you that the strategies you listed are an effective approach for preparing meetings?,1-7 (Not at all confident - Extremely confident)
+,pretask_approachClarity,How clearly do you understand your own approach to preparing meetings?,1-7 (Not at all clear - Extremely clear)
+,pretask_challenges,Please briefly describe the challenges you encounter when preparing meetings.,Open text
+,pretask_completedAt,Pre-task 완료 시간,DateTime
+Posttask,posttask_strategy1,Post-task: 회의 준비 전략 1 (수정 후),Open text
+,posttask_strategy2,Post-task: 회의 준비 전략 2 (수정 후),Open text
+,posttask_strategy3,Post-task: 회의 준비 전략 3 (수정 후),Open text
+,posttask_strategy4,Post-task: 회의 준비 전략 4 (수정 후),Open text
+,posttask_strategy5,Post-task: 회의 준비 전략 5 (수정 후),Open text
+,posttask_strategy6,Post-task: 회의 준비 전략 6 (수정 후),Open text
+,posttask_strategy7,Post-task: 회의 준비 전략 7 (수정 후),Open text
+,posttask_strategy8,Post-task: 회의 준비 전략 8 (수정 후),Open text
+,posttask_strategy9,Post-task: 회의 준비 전략 9 (수정 후),Open text
+,posttask_strategy10,Post-task: 회의 준비 전략 10 (수정 후),Open text
+,posttask_newStrategyConfidence,How confident are you that your new strategies will improve your upcoming meeting's effectiveness?,1-7 (Not at all confident - Extremely confident)
+,posttask_implementationLikelihood,How likely are you to actually implement these changes?,1-7 (Very unlikely - Very likely)
+,posttask_thinkingChange,"Compared to before reading the article, how much has your thinking about running effective meetings changed?",1-7 (Not at all - A great deal)
+,posttask_completedAt,Post-task 완료 시간,DateTime
+Quiz,quiz_duration,퀴즈 소요 시간,Milliseconds
+,quiz_totalQuestions,총 퀴즈 문항 수,Integer (9)
+,quiz_correctCount,정답 개수,Integer (0-9)
+,quiz_notSureCount,Not Sure' 선택 개수,Integer (0-9)
+,quiz_accuracy,전체 정답률,Percentage (0-100)
+,quiz_acc_low,Low complexity 문항 정답률 (Q1-3),Percentage (0-100)
+,quiz_acc_med,Medium complexity 문항 정답률 (Q4-6),Percentage (0-100)
+,quiz_acc_high,High complexity 문항 정답률 (Q7-9),Percentage (0-100)
+,quiz_confidence,How confident are you in your answers to the quiz?,1-7 (Not at all confident - Extremely confident)
+,quiz_answer_1,Q1 응답: What is the main purpose of this article?,Multiple choice text
+,quiz_correct_1,Q1 정답 여부,True / False
+,quiz_answer_2,"Q2 응답: According to the article, what are the three key phases of a meeting?",Multiple choice text
+,quiz_correct_2,Q2 정답 여부,True / False
+,quiz_answer_3,Q3 응답: How do many employees perceive meetings in organizations?,Multiple choice text
+,quiz_correct_3,Q3 정답 여부,True / False
+,quiz_answer_4,Q4 응답: When is it most appropriate to use informational meeting design?,Multiple choice text
+,quiz_correct_4,Q4 정답 여부,True / False
+,quiz_answer_5,Q5 응답: What does research suggest about the relationship between meetings and team dynamics?,Multiple choice text
+,quiz_correct_5,Q5 정답 여부,True / False
+,quiz_answer_6,Q6 응답: What is one key purpose of the 'after meeting' phase?,Multiple choice text
+,quiz_correct_6,Q6 정답 여부,True / False
+,quiz_answer_7,"Q7 응답: According to research cited in the article, what factor influences employees' long-term job satisfaction?",Multiple choice text
+,quiz_correct_7,Q7 정답 여부,True / False
+,quiz_answer_8,"Q8 응답: Based on the article, what two factors most strongly predict meeting success?",Multiple choice text
+,quiz_correct_8,Q8 정답 여부,True / False
+,quiz_answer_9,Q9 응답: What approach does the article suggest for improving meeting practices?,Multiple choice text
+,quiz_correct_9,Q9 정답 여부,True / False
+Reading,reading_totalEvents,"총 읽기 이벤트 수 (reading, scrolling, scanning, typing 등)",Integer
+,reading_duration,총 읽기 시간,Milliseconds
+,reading_focusTime_reading,paper 패널에서 보낸 시간,Milliseconds
+,reading_focusTime_chat,채팅/LLM 상호작용 패널에 사용한 시간,Milliseconds
+,reading_reading_count,Reading 이벤트 횟수 (Reading-Scrolling-Scanning 분석),Integer
+,reading_reading_totalDuration,Reading 이벤트 총 지속 시간 (Reading-Scrolling-Scanning 분석),Milliseconds
+,reading_scanning_count,Scanning 이벤트 횟수 (Reading-Scrolling-Scanning 분석),Integer
+,reading_scanning_totalDuration,Scanning 이벤트 총 지속 시간  (Reading-Scrolling-Scanning 분석),Milliseconds
+,reading_scrolling_count,Scrolling 이벤트 횟수 (Reading-Scrolling-Scanning 분석),Integer
+,reading_scrolling_totalDuration,Scrolling 이벤트 총 지속 시간 (Reading-Scrolling-Scanning 분석),Milliseconds
+Survey (nasaTLX),nasaTLX_mentalDemand,"Mental Demand: How mentally demanding was the task? (e.g., thinking, deciding, understanding, remembering)",1-7 (Very Low - Very High)
+,nasaTLX_physicalDemand,"Physical Demand: How physically demanding was the task? (e.g., clicking, scrolling, typing)",1-7 (Very Low - Very High)
+,nasaTLX_temporalDemand,Temporal Demand: How hurried or rushed was the pace of the task?,1-7 (Very Low - Very High)
+,nasaTLX_effort,Effort: How much effort did you need to put in to read and understand the article?,1-7 (Very Low - Very High)
+,nasaTLX_frustration,"Frustration: How insecure, discouraged, irritated, stressed, or annoyed were you during the task?",1-7 (Very Low - Very High)
+Survey (selfEfficacy),selfEfficacy_performance,How successful were you in understanding the article?,1-7 (Poor - Excellent)
+,selfEfficacy_overallGoal,I understood the overall goal and main takeaways of the article.,1-7 (Strongly disagree - Strongly agree)
+,selfEfficacy_authorsReasoning,I understood the authors' explanations and reasoning presented in the main text.,1-7 (Strongly disagree - Strongly agree)
+,selfEfficacy_connectingIdeas,I was able to connect different sections or ideas across the article.,1-7 (Strongly disagree - Strongly agree)
+,selfEfficacy_ownIdeas,I explored my own ideas and interpretations related to the article.,1-7 (Strongly disagree - Strongly agree)
+,selfEfficacy_alternativePerspectives,I generated alternative perspectives that challenged some of the article's ideas.,1-7 (Strongly disagree - Strongly agree)
+,selfEfficacy_verifyCredibility,I thought about how to verify the credibility of the information sources cited in the article.,1-7 (Strongly disagree - Strongly agree)
+,selfEfficacy_questionClaims,I questioned what I read to judge whether the claims were convincing.,1-7 (Strongly disagree - Strongly agree)
+,selfEfficacy_broaderImplications,"I reflected on the broader implications of the article (e.g., for my team, organization, or decisions).",1-7 (Strongly disagree - Strongly agree)
+Survey (llmUsefulness),llmUsefulness_overall,How useful was the GenAI for reading and understanding the article?,1-7 (Not at all useful - Extremely useful)
+,llmUsefulness_conceptHelp,How helpful was the GenAI for understanding difficult concepts or terminology?,1-7 (Not at all helpful - Extremely helpful)
+,llmUsefulness_findingsHelp,How helpful was the GenAI for understanding the research findings?,1-7 (Not at all helpful - Extremely helpful)
+,llmUsefulness_practicalHelp,How helpful was the GenAI for understanding practical applications?,1-7 (Not at all helpful - Extremely helpful)
+,llmUsefulness_timeSaving,How helpful was the GenAI for saving your time?,1-7 (Not at all helpful - Extremely helpful)
+Survey (llmTrust),llmTrust_competence,"Overall, the GenAI was competent and effective as a tool for assisting with reading.",1-7 (Strongly disagree - Strongly agree)
+,llmTrust_accuracy,The information provided by the GenAI was accurate.,1-7 (Strongly disagree - Strongly agree)
+,llmTrust_benevolence,I believe the GenAI is made with my best interests in mind.,1-7 (Strongly disagree - Strongly agree)
+,llmTrust_reliability,I can always rely on the GenAI when understanding articles.,1-7 (Strongly disagree - Strongly agree)
+,llmTrust_comfortActing,I have no reservations about acting on the information provided by the GenAI.,1-7 (Strongly disagree - Strongly agree)
+,llmTrust_comfortUsing,I have no hesitation in using the information provided by the GenAI.,1-7 (Strongly disagree - Strongly agree)
+Survey (attentionCheck),attentionCheck_focus,"In general, I was focused when reading and responding to items on this assessment.",1-5 (Strongly disagree - Strongly agree)
+,attentionCheck_stronglyDisagreeCheck,Click 'strongly disagree' if you are still paying attention to this assessment.,1-5 (Strongly disagree - Strongly agree)
+Survey (demographics),demographics_age,What is your age?,Integer
+,demographics_gender,What is your gender?,male / female / non-binary / other / prefer-not-to-say
+,demographics_education,What is your highest level of education?,high-school / associate / bachelor / master / doctorate
+,demographics_englishProficiency,What is your English proficiency level?,not-fluent / quite-fluent / very-fluent / native
+,demographics_workingSituation,What is your working situation?,full-time / part-time / not-working
+,demographics_workHoursPerWeek,How many hours do you work per week on average?,Integer
+,demographics_yearsInOrganization,How long have you been working in your current organization? (years),Numeric
+,demographics_yearsInJob,How long have you been working in your current job? (years),Numeric
+,demographics_jobTitle,What is your job title?,Open text
+,demographics_industry,What is your industry?,Open text
+,demographics_ethnicity,What is your race/ethnicity? (You may select more than one.),"Comma-separated list (e.g., white, black, asian, hispanic, mixed, other)"
+Survey (aiUsage),aiUsage_frequency,"How often do you use AI tools (e.g., ChatGPT, Claude, Gemini) for work?",never / rarely / sometimes / often / very-often
+,aiUsage_toolsUsed,What GenAI tools do you use at work?,Open text
+,aiUsage_purposes,For what purposes do you use AI tools at work? (Select all that apply.),"Comma-separated list (Research/Information gathering, Writing assistance, Brainstorming/Ideation, Coding assistance, Summarization, Translation, Other)"
+Survey (feedback),studyFeedback,Do you have any feedback about this study?,Open text

@@ -1,0 +1,23 @@
+{
+  "total_participants": 199,
+  "with_llm_count": 98,
+  "with_llm_extended_count": 101,
+  "with_llm_reading_time_avg": 20.27,
+  "with_llm_llm_time_avg": 4.59,
+  "with_llm_video_time_avg": 0.0,
+  "with_llm_audio_time_avg": 0.0,
+  "with_llm_extended_reading_time_avg": 11.64,
+  "with_llm_extended_llm_time_avg": 4.16,
+  "with_llm_extended_video_time_avg": 1.14,
+  "with_llm_extended_audio_time_avg": 0.99,
+  "with_llm_queries_avg": 4.06,
+  "with_llm_queries_median": 3.0,
+  "with_llm_queries_max": 14,
+  "with_llm_queries_min": 1,
+  "with_llm_queries_total": 211,
+  "with_llm_extended_queries_avg": 4.78,
+  "with_llm_extended_queries_median": 2.0,
+  "with_llm_extended_queries_max": 37,
+  "with_llm_extended_queries_min": 1,
+  "with_llm_extended_queries_total": 311
+}

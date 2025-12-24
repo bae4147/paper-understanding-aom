@@ -337,9 +337,10 @@ def generate_survey_csv(experiments, output_dir):
             'nasaTLX_mentalDemand': nasa.get('mentalDemand'),
             'nasaTLX_physicalDemand': nasa.get('physicalDemand'),
             'nasaTLX_temporalDemand': nasa.get('temporalDemand'),
-            'nasaTLX_performance': nasa.get('performance'),
             'nasaTLX_effort': nasa.get('effort'),
             'nasaTLX_frustration': nasa.get('frustration'),
+            # Self-efficacy - Performance
+            'selfEfficacy_performance': nasa.get('performance'),
             # Self-efficacy - Overall Comprehension
             'selfEfficacy_overallGoal': overall_comp.get('overallGoal'),
             'selfEfficacy_authorsReasoning': overall_comp.get('authorsReasoning'),
@@ -371,9 +372,17 @@ def generate_survey_csv(experiments, output_dir):
             'demographics_gender': demographics.get('gender'),
             'demographics_education': demographics.get('education'),
             'demographics_englishProficiency': demographics.get('englishProficiency'),
+            'demographics_workingSituation': demographics.get('workingSituation'),
+            'demographics_workHoursPerWeek': demographics.get('workHoursPerWeek'),
+            'demographics_yearsInOrganization': demographics.get('yearsInOrganization'),
+            'demographics_yearsInJob': demographics.get('yearsInJob'),
+            'demographics_jobTitle': demographics.get('jobTitle'),
+            'demographics_industry': demographics.get('industry'),
+            'demographics_ethnicity': ', '.join(demographics.get('ethnicity', [])) if demographics.get('ethnicity') else '',
             # AI Usage
             'aiUsage_frequency': ai_usage.get('frequency'),
             'aiUsage_toolsUsed': ai_usage.get('toolsUsed'),
+            'aiUsage_purposes': ', '.join([p.get('name', '') for p in ai_usage.get('purposes', []) if isinstance(p, dict) and p.get('name')]) if ai_usage.get('purposes') else '',
             # Feedback
             'studyFeedback': survey.get('studyFeedback'),
             'surveyCompletedAt': survey.get('surveyCompletedAt')
@@ -565,11 +574,11 @@ def generate_quizzes_csv(experiments, output_dir):
             'confidence': quiz.get('confidence')
         }
 
-        # Add individual answers (q1-q12)
-        for i in range(1, 13):
+        # Add individual answers (q1-q9)
+        for i in range(1, 10):
             q_str = str(i)
             row[f'answer_{i}'] = answers.get(q_str, '')
-            row[f'correct_{i}'] = grading.get(f'q{i}', {}).get('isCorrect', '')
+            row[f'correct_{i}'] = grading.get(q_str, {}).get('isCorrect', '')
 
         rows.append(row)
 
