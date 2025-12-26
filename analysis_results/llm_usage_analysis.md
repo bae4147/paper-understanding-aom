@@ -1,6 +1,6 @@
 # LLM Usage Analysis Report
 
-Generated: 2025-12-26 01:00:08
+Generated: 2025-12-26 01:24:21
 
 Data source: merged_all.csv, reading_events.csv, llm_messages.csv
 
@@ -18,8 +18,8 @@ N = 98
 
 | Media | N | Mean | SD | Min | Max |
 |-------|---|------|----:|----:|----:|
-| Reading (Paper) | 98 | 1285.3s | 2129.1 | 19.5s | 21587.6s |
-| Chat/LLM | 98 | 463.0s | 554.9 | 0.0s | 3643.3s |
+| Reading (Paper) | 98 | 1285.3s | 2129.1s | 19.5s | 21587.6s |
+| Chat/LLM | 98 | 463.0s | 554.9s | 0.0s | 3643.3s |
 
 ### 1.2 with_llm_extended Condition
 
@@ -27,11 +27,11 @@ N = 101
 
 | Media | N | Mean | SD | Min | Max |
 |-------|---|------|----:|----:|----:|
-| Reading (Paper) | 101 | 773.9s | 436.8 | 11.6s | 1620.1s |
-| Chat/LLM | 101 | 423.9s | 455.4 | 0.0s | 2042.9s |
-| Video | 101 | 100.9s | 161.8 | 0.0s | 998.5s |
-| Audio | 101 | 96.5s | 185.6 | 0.0s | 1217.1s |
-| Infographics | 101 | 70.3s | 184.9 | 0.0s | 1254.6s |
+| Reading (Paper) | 101 | 773.9s | 436.8s | 11.6s | 1620.1s |
+| Chat/LLM | 101 | 423.9s | 455.4s | 0.0s | 2042.9s |
+| Video | 101 | 100.9s | 161.8s | 0.0s | 998.5s |
+| Audio | 101 | 96.5s | 185.6s | 0.0s | 1217.1s |
+| Infographics | 101 | 70.3s | 184.9s | 0.0s | 1254.6s |
 
 ### 1.3 Extended Media Usage (with_llm_extended)
 
@@ -56,10 +56,10 @@ Number of queries sent to the LLM during the reading session (from llm_messages.
 
 ### 2.1 Query Count by Condition
 
-| Condition | N | Mean | SD | Min | Max |
-|-----------|---|------|----:|----:|----:|
-| with_llm | 98 | 2.15 | 3.08 | 0 | 14 |
-| with_llm_extended | 101 | 3.08 | 6.30 | 0 | 37 |
+| Condition | N | Mean | SD | Median | Min | Max |
+|-----------|---|------|----:|-------:|----:|----:|
+| with_llm | 98 | 2.15 | 3.08 | 1.0 | 0 | 14 |
+| with_llm_extended | 101 | 3.08 | 6.30 | 1.0 | 0 | 37 |
 
 ### 2.2 Query Count Distribution
 
@@ -123,6 +123,6 @@ Number of queries sent to the LLM during the reading session (from llm_messages.
 
 **2. LLM Query Count:**
 
-- **with_llm**: Mean 2.15 queries (SD = 3.08)
-- **with_llm_extended**: Mean 3.08 queries (SD = 6.30)
+- **with_llm**: Mean 2.15 queries (SD = 3.08, Median = 1.0)
+- **with_llm_extended**: Mean 3.08 queries (SD = 6.30, Median = 1.0)
 - with_llm_extended participants sent 43.0% more queries on average

@@ -37,7 +37,7 @@ def calculate_stats(values):
     valid = [v for v in values if v is not None]
     n = len(valid)
     if n == 0:
-        return {'n': 0, 'mean': None, 'sd': None, 'variance': None, 'min': None, 'max': None}
+        return {'n': 0, 'mean': None, 'sd': None, 'variance': None, 'min': None, 'max': None, 'median': None}
 
     mean = sum(valid) / n
     if n > 1:
@@ -47,13 +47,21 @@ def calculate_stats(values):
         variance = 0
         sd = 0
 
+    # Calculate median
+    sorted_valid = sorted(valid)
+    if n % 2 == 0:
+        median = (sorted_valid[n // 2 - 1] + sorted_valid[n // 2]) / 2
+    else:
+        median = sorted_valid[n // 2]
+
     return {
         'n': n,
         'mean': mean,
         'sd': sd,
         'variance': variance,
         'min': min(valid),
-        'max': max(valid)
+        'max': max(valid),
+        'median': median
     }
 
 
@@ -235,7 +243,7 @@ def main():
         stats = with_llm_media_stats[media]
         label = {'reading': 'Reading (Paper)', 'chat': 'Chat/LLM'}.get(media, media.title())
         if stats['n'] > 0 and stats['mean'] is not None:
-            report.append(f"| {label} | {stats['n']} | {stats['mean']:.1f}s | {stats['sd']:.1f} | {stats['min']:.1f}s | {stats['max']:.1f}s |")
+            report.append(f"| {label} | {stats['n']} | {stats['mean']:.1f}s | {stats['sd']:.1f}s | {stats['min']:.1f}s | {stats['max']:.1f}s |")
         else:
             report.append(f"| {label} | 0 | - | - | - | - |")
 
@@ -260,7 +268,7 @@ def main():
         }
         label = labels.get(media, media.title())
         if stats['n'] > 0 and stats['mean'] is not None:
-            report.append(f"| {label} | {stats['n']} | {stats['mean']:.1f}s | {stats['sd']:.1f} | {stats['min']:.1f}s | {stats['max']:.1f}s |")
+            report.append(f"| {label} | {stats['n']} | {stats['mean']:.1f}s | {stats['sd']:.1f}s | {stats['min']:.1f}s | {stats['max']:.1f}s |")
         else:
             report.append(f"| {label} | 0 | - | - | - | - |")
 
@@ -316,22 +324,22 @@ def main():
 
     report.append("### 2.1 Query Count by Condition")
     report.append("")
-    report.append("| Condition | N | Mean | SD | Min | Max |")
-    report.append("|-----------|---|------|----:|----:|----:|")
+    report.append("| Condition | N | Mean | SD | Median | Min | Max |")
+    report.append("|-----------|---|------|----:|-------:|----:|----:|")
 
     # with_llm
     stats = with_llm_query_stats
     if stats['n'] > 0:
-        report.append(f"| with_llm | {stats['n']} | {stats['mean']:.2f} | {stats['sd']:.2f} | {stats['min']:.0f} | {stats['max']:.0f} |")
+        report.append(f"| with_llm | {stats['n']} | {stats['mean']:.2f} | {stats['sd']:.2f} | {stats['median']:.1f} | {stats['min']:.0f} | {stats['max']:.0f} |")
     else:
-        report.append(f"| with_llm | 0 | - | - | - | - |")
+        report.append(f"| with_llm | 0 | - | - | - | - | - |")
 
     # with_llm_extended
     stats = with_llm_extended_query_stats
     if stats['n'] > 0:
-        report.append(f"| with_llm_extended | {stats['n']} | {stats['mean']:.2f} | {stats['sd']:.2f} | {stats['min']:.0f} | {stats['max']:.0f} |")
+        report.append(f"| with_llm_extended | {stats['n']} | {stats['mean']:.2f} | {stats['sd']:.2f} | {stats['median']:.1f} | {stats['min']:.0f} | {stats['max']:.0f} |")
     else:
-        report.append(f"| with_llm_extended | 0 | - | - | - | - |")
+        report.append(f"| with_llm_extended | 0 | - | - | - | - | - |")
 
     report.append("")
 
@@ -407,8 +415,8 @@ def main():
 
     report.append("**2. LLM Query Count:**")
     report.append("")
-    report.append(f"- **with_llm**: Mean {wl_q:.2f} queries (SD = {with_llm_query_stats['sd']:.2f})")
-    report.append(f"- **with_llm_extended**: Mean {wle_q:.2f} queries (SD = {with_llm_extended_query_stats['sd']:.2f})")
+    report.append(f"- **with_llm**: Mean {wl_q:.2f} queries (SD = {with_llm_query_stats['sd']:.2f}, Median = {with_llm_query_stats['median']:.1f})")
+    report.append(f"- **with_llm_extended**: Mean {wle_q:.2f} queries (SD = {with_llm_extended_query_stats['sd']:.2f}, Median = {with_llm_extended_query_stats['median']:.1f})")
 
     if wl_q > wle_q and wle_q > 0:
         diff_pct = ((wl_q - wle_q) / wle_q) * 100
