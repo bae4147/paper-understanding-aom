@@ -153,6 +153,9 @@ def main():
     acc_med = {'all': [], 'by_condition': defaultdict(list)}
     acc_high = {'all': [], 'by_condition': defaultdict(list)}
 
+    # Per-question accuracy (Q1-Q9)
+    acc_by_question = {f'Q{i}': {'all': [], 'by_condition': defaultdict(list)} for i in range(1, 10)}
+
     for row in quizzes:
         cond = row.get('condition')
         overall = safe_float(row.get('accuracy'))
@@ -175,6 +178,16 @@ def main():
         if high is not None:
             acc_high['all'].append(high)
             acc_high['by_condition'][cond].append(high)
+
+        # Per-question accuracy (correct=1, incorrect=0)
+        for i in range(1, 10):
+            correct_val = row.get(f'correct_{i}', '')
+            if correct_val == 'True':
+                acc_by_question[f'Q{i}']['all'].append(100.0)
+                acc_by_question[f'Q{i}']['by_condition'][cond].append(100.0)
+            elif correct_val == 'False':
+                acc_by_question[f'Q{i}']['all'].append(0.0)
+                acc_by_question[f'Q{i}']['by_condition'][cond].append(0.0)
 
     # Generate report
     report = []
@@ -244,6 +257,43 @@ def main():
             report.append(f"| {cond_display} | {stats['n']} | {stats['mean']:.2f}% | {stats['sd']:.2f} | {stats['variance']:.2f} | {stats['se']:.2f} |")
 
         report.append("")
+
+    # Per-question accuracy (Q1-Q9)
+    report.append("### 1.3 Per-Question Accuracy (Q1-Q9)")
+    report.append("")
+    report.append("#### Overall Statistics")
+    report.append("")
+    report.append("| Question | N | Mean | SD | Variance |")
+    report.append("|----------|---|------|----|---------:|")
+
+    for i in range(1, 10):
+        q_key = f'Q{i}'
+        stats = calculate_stats(acc_by_question[q_key]['all'])
+        if stats['n'] > 0:
+            report.append(f"| {q_key} | {stats['n']} | {stats['mean']:.2f}% | {stats['sd']:.2f} | {stats['variance']:.2f} |")
+        else:
+            report.append(f"| {q_key} | 0 | - | - | - |")
+
+    report.append("")
+
+    # Per-question by condition
+    report.append("#### By Condition")
+    report.append("")
+    report.append("| Question | Condition | N | Mean | SD | Variance |")
+    report.append("|----------|-----------|---|------|----|---------:|")
+
+    for i in range(1, 10):
+        q_key = f'Q{i}'
+        for cond in conditions:
+            data = acc_by_question[q_key]['by_condition'][cond]
+            stats = calculate_stats(data)
+            cond_display = cond.replace('_', ' ').title()
+            if stats['n'] > 0:
+                report.append(f"| {q_key} | {cond_display} | {stats['n']} | {stats['mean']:.2f}% | {stats['sd']:.2f} | {stats['variance']:.2f} |")
+            else:
+                report.append(f"| {q_key} | {cond_display} | 0 | - | - | - |")
+
+    report.append("")
 
     # ========================================
     # Part 2: One-way ANOVA

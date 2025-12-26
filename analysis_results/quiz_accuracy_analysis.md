@@ -1,6 +1,6 @@
 # Quiz Accuracy Analysis Report
 
-Generated: 2025-12-23 19:17:32
+Generated: 2025-12-26 00:02:50
 
 ---
 
@@ -57,6 +57,54 @@ Descriptive statistics (Mean, SD, Variance, SE, Min, Max) were calculated for:
 | With Llm | 98 | 72.79% | 28.86 | 833.10 | 2.92 |
 | With Llm Extended | 101 | 70.96% | 30.80 | 948.46 | 3.06 |
 
+### 1.3 Per-Question Accuracy (Q1-Q9)
+
+#### Overall Statistics
+
+| Question | N | Mean | SD | Variance |
+|----------|---|------|----|---------:|
+| Q1 | 295 | 94.92% | 22.01 | 484.26 |
+| Q2 | 295 | 71.86% | 45.04 | 2028.83 |
+| Q3 | 295 | 92.20% | 26.86 | 721.32 |
+| Q4 | 295 | 82.37% | 38.17 | 1456.94 |
+| Q5 | 295 | 79.32% | 40.57 | 1645.80 |
+| Q6 | 295 | 87.46% | 33.18 | 1100.66 |
+| Q7 | 295 | 65.08% | 47.75 | 2280.18 |
+| Q8 | 295 | 75.93% | 42.82 | 1833.74 |
+| Q9 | 295 | 70.51% | 45.68 | 2086.48 |
+
+#### By Condition
+
+| Question | Condition | N | Mean | SD | Variance |
+|----------|-----------|---|------|----|---------:|
+| Q1 | Without Llm | 96 | 95.83% | 20.09 | 403.51 |
+| Q1 | With Llm | 98 | 95.92% | 19.89 | 395.54 |
+| Q1 | With Llm Extended | 101 | 93.07% | 25.52 | 651.49 |
+| Q2 | Without Llm | 96 | 72.92% | 44.67 | 1995.61 |
+| Q2 | With Llm | 98 | 69.39% | 46.33 | 2146.01 |
+| Q2 | With Llm Extended | 101 | 73.27% | 44.48 | 1978.22 |
+| Q3 | Without Llm | 96 | 94.79% | 22.34 | 498.90 |
+| Q3 | With Llm | 98 | 89.80% | 30.43 | 925.73 |
+| Q3 | With Llm Extended | 101 | 92.08% | 27.14 | 736.63 |
+| Q4 | Without Llm | 96 | 80.21% | 40.05 | 1604.17 |
+| Q4 | With Llm | 98 | 86.73% | 34.09 | 1162.42 |
+| Q4 | With Llm Extended | 101 | 80.20% | 40.05 | 1603.96 |
+| Q5 | Without Llm | 96 | 79.17% | 40.82 | 1666.67 |
+| Q5 | With Llm | 98 | 81.63% | 38.92 | 1514.83 |
+| Q5 | With Llm Extended | 101 | 77.23% | 42.15 | 1776.24 |
+| Q6 | Without Llm | 96 | 84.38% | 36.50 | 1332.24 |
+| Q6 | With Llm | 98 | 87.76% | 32.95 | 1085.63 |
+| Q6 | With Llm Extended | 101 | 90.10% | 30.02 | 900.99 |
+| Q7 | Without Llm | 96 | 59.38% | 49.37 | 2437.50 |
+| Q7 | With Llm | 98 | 73.47% | 44.38 | 1969.28 |
+| Q7 | With Llm Extended | 101 | 62.38% | 48.69 | 2370.30 |
+| Q8 | Without Llm | 96 | 71.88% | 45.20 | 2042.76 |
+| Q8 | With Llm | 98 | 71.43% | 45.41 | 2061.86 |
+| Q8 | With Llm Extended | 101 | 84.16% | 36.70 | 1346.53 |
+| Q9 | Without Llm | 96 | 71.88% | 45.20 | 2042.76 |
+| Q9 | With Llm | 98 | 73.47% | 44.38 | 1969.28 |
+| Q9 | With Llm Extended | 101 | 66.34% | 47.49 | 2255.45 |
+
 ---
 
 ## 2. One-way ANOVA Analysis
@@ -81,12 +129,12 @@ differs significantly across the three experimental conditions:
 
 ### 2.1 ANOVA Results
 
-| Measure | F(2, 292) | p-value | eta^2 | Effect Size | Significant (alpha=.05) |
-|---------|-----------|---------|------:|-------------|-------------------------|
-| Overall Accuracy | 0.269 | .5591 | 0.0018 | negligible | No |
-| Low Complexity (Q1-3) | 0.378 | .4271 | 0.0026 | negligible | No |
-| Medium Complexity (Q4-6) | 0.684 | .1613 | 0.0047 | negligible | No |
-| High Complexity (Q7-9) | 0.671 | .1700 | 0.0046 | negligible | No |
+| Measure | F | p-value | eta^2 | Effect Size | Significant (alpha=.05) |
+|---------|---|---------|------:|-------------|-------------------------|
+| Overall Accuracy | 0.269 | N/A (scipy required) | 0.0018 | negligible | N/A |
+| Low Complexity (Q1-3) | 0.378 | N/A (scipy required) | 0.0026 | negligible | N/A |
+| Medium Complexity (Q4-6) | 0.684 | N/A (scipy required) | 0.0047 | negligible | N/A |
+| High Complexity (Q7-9) | 0.671 | N/A (scipy required) | 0.0046 | negligible | N/A |
 
 *Note: Significance level alpha = 0.05*
 
@@ -96,7 +144,7 @@ differs significantly across the three experimental conditions:
 
 | Source | SS | df | MS | F | p |
 |--------|----:|---:|----:|---:|---:|
-| Between Groups | 221.07 | 2 | 110.53 | 0.269 | .5591 |
+| Between Groups | 221.07 | 2 | 110.53 | 0.269 | N/A |
 | Within Groups | 119844.81 | 292 | 410.43 | | |
 | Total | 120065.88 | 294 | | | |
 
@@ -104,7 +152,7 @@ differs significantly across the three experimental conditions:
 
 | Source | SS | df | MS | F | p |
 |--------|----:|---:|----:|---:|---:|
-| Between Groups | 388.49 | 2 | 194.25 | 0.378 | .4271 |
+| Between Groups | 388.49 | 2 | 194.25 | 0.378 | N/A |
 | Within Groups | 149987.83 | 292 | 513.66 | | |
 | Total | 150376.32 | 294 | | | |
 
@@ -112,7 +160,7 @@ differs significantly across the three experimental conditions:
 
 | Source | SS | df | MS | F | p |
 |--------|----:|---:|----:|---:|---:|
-| Between Groups | 869.28 | 2 | 434.64 | 0.684 | .1613 |
+| Between Groups | 869.28 | 2 | 434.64 | 0.684 | N/A |
 | Within Groups | 185485.02 | 292 | 635.22 | | |
 | Total | 186354.30 | 294 | | | |
 
@@ -120,7 +168,7 @@ differs significantly across the three experimental conditions:
 
 | Source | SS | df | MS | F | p |
 |--------|----:|---:|----:|---:|---:|
-| Between Groups | 1281.47 | 2 | 640.74 | 0.671 | .1700 |
+| Between Groups | 1281.47 | 2 | 640.74 | 0.671 | N/A |
 | Within Groups | 278918.32 | 292 | 955.20 | | |
 | Total | 280199.80 | 294 | | | |
 
@@ -139,16 +187,10 @@ differs significantly across the three experimental conditions:
 
 3. **Condition Effects (ANOVA Results)**:
 
-   All ANOVA tests showed **no significant differences** across conditions (all F < 1.0, p > .05).
-   Effect sizes (eta^2) were negligible (< 0.01) for all measures.
-
-   - **Overall Accuracy**: F(2, 292) = 0.269, p = .559, eta^2 = 0.002
-   - **Low Complexity (Q1-3)**: F(2, 292) = 0.378, p = .427, eta^2 = 0.003
-   - **Medium Complexity (Q4-6)**: F(2, 292) = 0.684, p = .161, eta^2 = 0.005
-   - **High Complexity (Q7-9)**: F(2, 292) = 0.671, p = .170, eta^2 = 0.005
-
-4. **Conclusion**: LLM condition did not significantly affect quiz accuracy at any complexity level.
-   The experimental manipulation (LLM access) did not lead to meaningful differences in comprehension performance.
+   - **Overall Accuracy**: F = 0.269, eta^2 = 0.0018
+   - **Low Complexity (Q1-3)**: F = 0.378, eta^2 = 0.0026
+   - **Medium Complexity (Q4-6)**: F = 0.684, eta^2 = 0.0047
+   - **High Complexity (Q7-9)**: F = 0.671, eta^2 = 0.0046
 
 ### Condition Comparison
 

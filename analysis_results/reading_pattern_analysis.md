@@ -1,6 +1,6 @@
 # Reading Pattern Analysis Report
 
-Generated: 2025-12-23 20:29:41
+Generated: 2025-12-23 20:56:28
 
 ---
 
@@ -49,6 +49,26 @@ A higher ratio indicates more focused, deliberate reading behavior.
 **Results:** F(2, 292) = 9.147, p = 0.0001, η² = 0.0590 (small)
 
 The effect of condition on reading ratio is **significant** at α = .05.
+
+### 1.3 Post-hoc Analysis (Tukey HSD)
+
+Since the ANOVA was significant, Tukey's Honestly Significant Difference (HSD) test was conducted
+to determine which specific pairs of conditions differ significantly.
+
+#### Pairwise Comparisons
+
+| Comparison | Mean Diff | SE | q | p | Cohen's d | Significant |
+|------------|-----------|-----|-----|-----|-----------|-------------|
+| Without LLM vs With LLM | 0.0599 | 0.0131 | 4.565 | 0.0001 | 0.464 | Yes* |
+| Without LLM vs With LLM Extended | 0.0748 | 0.0130 | 5.739 | 0.0000 | 0.578 | Yes* |
+| With LLM vs With LLM Extended | 0.0149 | 0.0130 | 1.146 | 0.2693 | 0.115 | No |
+
+*Note: p < .05 indicates significant difference*
+
+#### Significant Differences Summary
+
+- **Without LLM** (94.2%) had significantly higher reading ratio than **With LLM** (88.2%), p = 0.0001, Cohen's d = 0.464
+- **Without LLM** (94.2%) had significantly higher reading ratio than **With LLM Extended** (86.7%), p = 0.0000, Cohen's d = 0.578
 
 ---
 

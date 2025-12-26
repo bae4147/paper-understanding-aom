@@ -148,6 +148,76 @@ def calculate_eta_squared(groups):
     return ssb / sst if sst > 0 else 0
 
 
+def studentized_range_p(q, k, df):
+    """
+    Approximate p-value for studentized range statistic.
+    Uses approximation for Tukey HSD test.
+    """
+    # Simple approximation using relationship to F distribution
+    # q^2 / 2 approximates F with (k, df) degrees of freedom for large df
+    f_approx = (q ** 2) / 2
+    # Bonferroni-style approximation for multiple comparisons
+    # Number of pairwise comparisons = k*(k-1)/2
+    num_comparisons = k * (k - 1) / 2
+    # Get p-value from F and apply rough correction
+    p_single = f_to_p(f_approx, k - 1, df)
+    # Conservative estimate
+    return min(1.0, p_single * num_comparisons / 2)
+
+
+def tukey_hsd(groups, group_names):
+    """
+    Perform Tukey's Honestly Significant Difference (HSD) test.
+    Returns pairwise comparison results.
+    """
+    k = len(groups)
+    n_total = sum(len(g) for g in groups)
+
+    # Calculate MSW (Mean Square Within)
+    ssw = sum(sum((x - sum(g)/len(g))**2 for x in g) for g in groups)
+    df_within = n_total - k
+    msw = ssw / df_within
+
+    # Group means and sizes
+    means = [sum(g) / len(g) for g in groups]
+    sizes = [len(g) for g in groups]
+
+    results = []
+
+    # Pairwise comparisons
+    for i in range(k):
+        for j in range(i + 1, k):
+            mean_diff = means[i] - means[j]
+
+            # Standard error for unequal sample sizes (Tukey-Kramer)
+            se = math.sqrt(msw * 0.5 * (1/sizes[i] + 1/sizes[j]))
+
+            # q statistic (studentized range)
+            q = abs(mean_diff) / se
+
+            # Approximate p-value
+            p_value = studentized_range_p(q, k, df_within)
+
+            # Cohen's d effect size
+            pooled_sd = math.sqrt(msw)
+            cohens_d = abs(mean_diff) / pooled_sd
+
+            results.append({
+                'group1': group_names[i],
+                'group2': group_names[j],
+                'mean1': means[i],
+                'mean2': means[j],
+                'mean_diff': mean_diff,
+                'se': se,
+                'q': q,
+                'p_value': p_value,
+                'cohens_d': cohens_d,
+                'significant': p_value < 0.05
+            })
+
+    return results
+
+
 def generate_llm_timeline_html(raw_by_pid, pid_to_condition, with_llm_pids, with_llm_extended_pids):
     """Generate HTML visualization for LLM usage timeline"""
 
@@ -453,6 +523,51 @@ def main():
     report.append("")
     report.append(f"The effect of condition on reading ratio is **{sig_text}** at α = .05.")
     report.append("")
+
+    # Post-hoc test (Tukey HSD) if ANOVA is significant
+    if p_value < 0.05:
+        report.append("### 1.3 Post-hoc Analysis (Tukey HSD)")
+        report.append("")
+        report.append("Since the ANOVA was significant, Tukey's Honestly Significant Difference (HSD) test was conducted")
+        report.append("to determine which specific pairs of conditions differ significantly.")
+        report.append("")
+
+        tukey_results = tukey_hsd(groups, condition_labels)
+
+        report.append("#### Pairwise Comparisons")
+        report.append("")
+        report.append("| Comparison | Mean Diff | SE | q | p | Cohen's d | Significant |")
+        report.append("|------------|-----------|-----|-----|-----|-----------|-------------|")
+
+        for r in tukey_results:
+            sig_marker = "Yes*" if r['significant'] else "No"
+            # Show direction of difference
+            if r['mean_diff'] > 0:
+                direction = f"{r['group1']} > {r['group2']}"
+            else:
+                direction = f"{r['group2']} > {r['group1']}"
+
+            report.append(f"| {r['group1']} vs {r['group2']} | {r['mean_diff']:.4f} | {r['se']:.4f} | {r['q']:.3f} | {r['p_value']:.4f} | {r['cohens_d']:.3f} | {sig_marker} |")
+
+        report.append("")
+        report.append("*Note: p < .05 indicates significant difference*")
+        report.append("")
+
+        # Summary of significant differences
+        sig_pairs = [r for r in tukey_results if r['significant']]
+        if sig_pairs:
+            report.append("#### Significant Differences Summary")
+            report.append("")
+            for r in sig_pairs:
+                higher = r['group1'] if r['mean_diff'] > 0 else r['group2']
+                lower = r['group2'] if r['mean_diff'] > 0 else r['group1']
+                higher_mean = r['mean1'] if r['mean_diff'] > 0 else r['mean2']
+                lower_mean = r['mean2'] if r['mean_diff'] > 0 else r['mean1']
+                report.append(f"- **{higher}** ({higher_mean*100:.1f}%) had significantly higher reading ratio than **{lower}** ({lower_mean*100:.1f}%), p = {r['p_value']:.4f}, Cohen's d = {r['cohens_d']:.3f}")
+            report.append("")
+        else:
+            report.append("No pairwise comparisons reached statistical significance after Tukey HSD correction.")
+            report.append("")
 
     # Part 2: Reading Time by Section
     report.append("---")

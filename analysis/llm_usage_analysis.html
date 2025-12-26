@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Usage - Per-Participant Timelines</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function LLMUsageTimelines() {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [activeTab, setActiveTab] = useState('with_llm');
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            // Build segments from tab_segments.csv data
+            const buildSegmentsFromData = (segmentsData) => {
+                return segmentsData.map(seg => ({
+                    type: seg.tab,
+                    start: parseFloat(seg.start_ms),
+                    end: parseFloat(seg.end_ms),
+                    duration: parseFloat(seg.duration_ms)
+                }));
+            };
+
+            const loadData = async () => {
+                try {
+                    // Load merged_all.csv
+                    const mergedResponse = await fetch('../data/processed/merged_all.csv');
+                    const mergedText = await mergedResponse.text();
+                    const mergedParsed = Papa.parse(mergedText, { header: true, skipEmptyLines: true });
+                    const mergedData = mergedParsed.data;
+
+                    // Load tab_segments.csv for timeline data
+                    const segmentsResponse = await fetch('../data/processed/tab_segments.csv');
+                    const segmentsText = await segmentsResponse.text();
+                    const segmentsParsed = Papa.parse(segmentsText, { header: true, skipEmptyLines: true });
+                    const segmentsData = segmentsParsed.data;
+
+                    // Load reading_summary.csv for focus times
+                    const summaryResponse = await fetch('../data/processed/reading_summary.csv');
+                    const summaryText = await summaryResponse.text();
+                    const summaryParsed = Papa.parse(summaryText, { header: true, skipEmptyLines: true });
+                    const summaryData = summaryParsed.data;
+
+                    // Load llm_messages.csv for query count
+                    const llmResponse = await fetch('../data/processed/llm_messages.csv');
+                    const llmText = await llmResponse.text();
+                    const llmParsed = Papa.parse(llmText, { header: true, skipEmptyLines: true });
+                    const llmData = llmParsed.data;
+
+                    // Count queries per participant
+                    const queryCounts = {};
+                    llmData.forEach(msg => {
+                        const pid = msg.participantId;
+                        queryCounts[pid] = (queryCounts[pid] || 0) + 1;
+                    });
+
+                    // Group segments by participant
+                    const segmentsByParticipant = {};
+                    segmentsData.forEach(seg => {
+                        const pid = seg.participantId;
+                        if (!segmentsByParticipant[pid]) {
+                            segmentsByParticipant[pid] = [];
+                        }
+                        segmentsByParticipant[pid].push(seg);
+                    });
+
+                    // Create summary lookup
+                    const summaryByParticipant = {};
+                    summaryData.forEach(row => {
+                        summaryByParticipant[row.participantId] = row;
+                    });
+
+                    // Filter LLM conditions and attach segments/queries
+                    const llmParticipants = mergedData
+                        .filter(p => p.condition === 'with_llm' || p.condition === 'with_llm_extended')
+                        .map(p => ({
+                            ...p,
+                            segments: segmentsByParticipant[p.participantId] || [],
+                            summary: summaryByParticipant[p.participantId] || {},
+                            queryCount: queryCounts[p.participantId] || 0
+                        }));
+
+                    const withLlm = llmParticipants.filter(p => p.condition === 'with_llm');
+                    const withLlmExtended = llmParticipants.filter(p => p.condition === 'with_llm_extended');
+
+                    setData({ withLlm, withLlmExtended });
+                    setLoading(false);
+                } catch (err) {
+                    setError(err.message);
+                    setLoading(false);
+                }
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                        <div className="text-xl text-gray-600">Loading data...</div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                        <div className="text-xl text-red-600">Error: {error}</div>
+                    </div>
+                );
+            }
+
+            const currentParticipants = activeTab === 'with_llm' ? data.withLlm : data.withLlmExtended;
+
+            // Color map for different tabs/activities
+            const colorMap = {
+                reading: '#059669',      // Green - paper reading
+                chat: '#8B5CF6',          // Purple - LLM chat
+                video: '#F59E0B',         // Amber - video
+                audio: '#3B82F6',         // Blue - audio
+                infographics: '#EC4899',  // Pink - infographics
+            };
+
+            // Calculate aggregate stats
+            const calculateStats = (participants) => {
+                const stats = {
+                    reading: 0,
+                    chat: 0,
+                    video: 0,
+                    audio: 0,
+                    infographics: 0,
+                    totalQueries: 0,
+                    avgQueries: 0
+                };
+
+                participants.forEach(p => {
+                    stats.reading += parseFloat(p.summary.focusTime_reading || 0);
+                    stats.chat += parseFloat(p.summary.focusTime_chat || 0);
+                    stats.video += parseFloat(p.summary.focusTime_video || 0);
+                    stats.audio += parseFloat(p.summary.focusTime_audio || 0);
+                    stats.infographics += parseFloat(p.summary.focusTime_infographics || 0);
+                    stats.totalQueries += p.queryCount;
+                });
+
+                const n = participants.length;
+                if (n > 0) {
+                    stats.reading /= n;
+                    stats.chat /= n;
+                    stats.video /= n;
+                    stats.audio /= n;
+                    stats.infographics /= n;
+                    stats.avgQueries = stats.totalQueries / n;
+                }
+
+                return stats;
+            };
+
+            const stats = calculateStats(currentParticipants);
+
+            return (
+                <div className="min-h-screen bg-gray-100">
+                    {/* Header */}
+                    <div className="bg-white shadow">
+                        <div className="max-w-7xl mx-auto px-6 py-4">
+                            <h1 className="text-2xl font-bold text-gray-900">Per-Participant Activity Timelines</h1>
+                            <p className="text-gray-500 text-sm mt-1">
+                                Data source: tab_segments.csv, reading_summary.csv, llm_messages.csv
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-6 py-6">
+                        {/* Tabs */}
+                        <div className="flex border-b border-gray-200 mb-6">
+                            <button
+                                onClick={() => setActiveTab('with_llm')}
+                                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                                    activeTab === 'with_llm'
+                                        ? 'border-purple-500 text-purple-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                with_llm (n={data.withLlm.length})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('with_llm_extended')}
+                                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                                    activeTab === 'with_llm_extended'
+                                        ? 'border-indigo-500 text-indigo-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                with_llm_extended (n={data.withLlmExtended.length})
+                            </button>
+                        </div>
+
+                        {/* Summary Stats */}
+                        <div className="bg-white rounded-lg shadow p-4 mb-6">
+                            <h3 className="text-sm font-medium text-gray-700 mb-3">Average Focus Time (per participant)</h3>
+                            <div className="flex flex-wrap gap-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded" style={{backgroundColor: colorMap.reading}}></div>
+                                    <span className="text-sm text-gray-600">Reading: {(stats.reading / 1000).toFixed(0)}s</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded" style={{backgroundColor: colorMap.chat}}></div>
+                                    <span className="text-sm text-gray-600">Chat: {(stats.chat / 1000).toFixed(0)}s</span>
+                                </div>
+                                {activeTab === 'with_llm_extended' && (
+                                    <>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded" style={{backgroundColor: colorMap.video}}></div>
+                                            <span className="text-sm text-gray-600">Video: {(stats.video / 1000).toFixed(0)}s</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded" style={{backgroundColor: colorMap.audio}}></div>
+                                            <span className="text-sm text-gray-600">Audio: {(stats.audio / 1000).toFixed(0)}s</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded" style={{backgroundColor: colorMap.infographics}}></div>
+                                            <span className="text-sm text-gray-600">Infographics: {(stats.infographics / 1000).toFixed(0)}s</span>
+                                        </div>
+                                    </>
+                                )}
+                                <div className="ml-4 text-sm text-gray-600">
+                                    Avg Queries: {stats.avgQueries.toFixed(1)}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <p className="text-sm text-gray-500 mb-4">
+                                Each timeline shows time allocation across different media types. Hover over segments for details.
+                            </p>
+
+                            {/* Legend */}
+                            <div className="flex gap-4 mb-6 flex-wrap">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded" style={{backgroundColor: colorMap.reading}}></div>
+                                    <span className="text-sm">Reading (Paper)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded" style={{backgroundColor: colorMap.chat}}></div>
+                                    <span className="text-sm">Chat/LLM</span>
+                                </div>
+                                {activeTab === 'with_llm_extended' && (
+                                    <>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 rounded" style={{backgroundColor: colorMap.video}}></div>
+                                            <span className="text-sm">Video</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 rounded" style={{backgroundColor: colorMap.audio}}></div>
+                                            <span className="text-sm">Audio</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 rounded" style={{backgroundColor: colorMap.infographics}}></div>
+                                            <span className="text-sm">Infographics</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Participant Timelines */}
+                            <div className="space-y-4">
+                                {currentParticipants.map((participant, idx) => {
+                                    const segmentsRaw = participant.segments || [];
+                                    const segments = buildSegmentsFromData(segmentsRaw);
+
+                                    if (segments.length === 0) {
+                                        return (
+                                            <div key={participant.participantId} className="border rounded-lg p-4 bg-gray-50">
+                                                <div className="flex justify-between items-center">
+                                                    <div>
+                                                        <span className="font-mono text-sm text-gray-700">{participant.participantId}</span>
+                                                        <span className="ml-2 text-xs text-gray-500">
+                                                            Queries: {participant.queryCount}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-xs text-gray-400">No timeline events</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    const startTime = segments[0].start;
+                                    const endTime = segments[segments.length - 1].end;
+                                    const totalDuration = endTime - startTime;
+
+                                    // Calculate time per tab
+                                    const tabTimes = {};
+                                    segments.forEach(seg => {
+                                        tabTimes[seg.type] = (tabTimes[seg.type] || 0) + seg.duration;
+                                    });
+
+                                    return (
+                                        <div key={participant.participantId} className="border rounded-lg p-4 bg-gray-50">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono text-sm text-gray-700">{participant.participantId}</span>
+                                                    <span className="text-xs text-gray-500">
+                                                        Queries: {participant.queryCount}
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-gray-500 flex items-center gap-3">
+                                                    <span>Duration: {(totalDuration / 1000 / 60).toFixed(1)}min</span>
+                                                    {activeTab === 'with_llm_extended' && (
+                                                        <span className="text-gray-400">
+                                                            V:{((tabTimes.video || 0) / 1000).toFixed(0)}s
+                                                            A:{((tabTimes.audio || 0) / 1000).toFixed(0)}s
+                                                            I:{((tabTimes.infographics || 0) / 1000).toFixed(0)}s
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Timeline Bar */}
+                                            <div className="relative h-8 bg-gray-200 rounded overflow-hidden">
+                                                {segments.map((seg, segIdx) => {
+                                                    if (totalDuration <= 0) return null;
+                                                    const leftPercent = ((seg.start - startTime) / totalDuration) * 100;
+                                                    const widthPercent = (seg.duration / totalDuration) * 100;
+
+                                                    if (leftPercent < 0 || leftPercent > 100) return null;
+                                                    if (widthPercent <= 0) return null;
+
+                                                    return (
+                                                        <div
+                                                            key={segIdx}
+                                                            className="absolute h-full opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                                                            style={{
+                                                                left: `${Math.max(0, leftPercent)}%`,
+                                                                width: `${Math.min(widthPercent, 100 - Math.max(0, leftPercent))}%`,
+                                                                backgroundColor: colorMap[seg.type] || '#6B7280',
+                                                                minWidth: '2px'
+                                                            }}
+                                                            title={`${seg.type}: ${(seg.duration / 1000).toFixed(1)}s`}
+                                                        ></div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Time labels */}
+                                            <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                                <span>0s</span>
+                                                <span>{((totalDuration / 1000) / 2).toFixed(0)}s</span>
+                                                <span>{(totalDuration / 1000).toFixed(0)}s</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<LLMUsageTimelines />);
+    </script>
+</body>
+</html>

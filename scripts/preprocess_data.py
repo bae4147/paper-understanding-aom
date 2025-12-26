@@ -246,7 +246,15 @@ def generate_reading_events_csv(experiments, output_dir):
                 'classification': event.get('classification'),
                 'pauseDuration': event.get('pauseDuration'),
                 'scrollDuration': event.get('scrollDuration'),
-                'selectedText': event.get('selectedText', '')
+                'selectedText': event.get('selectedText', ''),
+                # Tab switch related fields
+                'from': event.get('from', ''),
+                'to': event.get('to', ''),
+                'timeOnPreviousTab': event.get('timeOnPreviousTab', ''),
+                # LLM activity fields
+                'duration': event.get('duration', ''),
+                # Audio/Video fields
+                'currentTime': event.get('currentTime', '')
             })
 
     write_csv(os.path.join(output_dir, 'reading_events.csv'), rows)
@@ -275,8 +283,85 @@ def generate_reading_section_analysis_csv(experiments, output_dir):
     return rows
 
 
+def calculate_tab_times_from_events(events, session_duration):
+    """
+    Calculate time spent on each tab from focus_switch and resource_tab_switch events.
+
+    Args:
+        events: List of event dictionaries
+        session_duration: Total session duration in ms (from Firebase)
+
+    Returns:
+        dict: Time spent on each tab in ms
+        list: List of segment dictionaries
+    """
+    switch_events = [e for e in events
+                     if e.get('eventType') in ('focus_switch', 'resource_tab_switch')]
+
+    all_timestamps = [float(e['timestamp']) for e in events
+                      if e.get('timestamp') and e['timestamp'] != '']
+    if not all_timestamps or not session_duration:
+        return {}, []
+
+    first_event_timestamp = min(all_timestamps)
+    last_event_timestamp = max(all_timestamps)
+
+    # Calculate session start time based on Firebase duration
+    event_span = last_event_timestamp - first_event_timestamp
+    time_before_first_event = session_duration - event_span
+
+    session_start = first_event_timestamp - time_before_first_event
+    session_end = session_start + session_duration
+
+    # Build segments
+    segments = []
+    current_tab = 'reading'  # Default initial focus
+    segment_start = session_start
+
+    # Sort switch events by timestamp
+    sorted_switches = sorted(
+        [e for e in switch_events if e.get('timestamp')],
+        key=lambda x: float(x['timestamp'])
+    )
+
+    for se in sorted_switches:
+        ts = float(se['timestamp'])
+
+        # End current segment
+        if ts > segment_start:
+            segments.append({
+                'tab': current_tab,
+                'start': segment_start,
+                'end': ts,
+                'duration': ts - segment_start
+            })
+
+        # Start new segment
+        new_tab = se.get('to', '')
+        if new_tab and new_tab != 'phase_complete':
+            current_tab = new_tab
+        segment_start = ts
+
+    # Add final segment
+    if session_end > segment_start:
+        segments.append({
+            'tab': current_tab,
+            'start': segment_start,
+            'end': session_end,
+            'duration': session_end - segment_start
+        })
+
+    # Sum up times per tab
+    tab_times = {}
+    for seg in segments:
+        tab = seg['tab']
+        tab_times[tab] = tab_times.get(tab, 0) + seg['duration']
+
+    return tab_times, segments
+
+
 def generate_reading_summary_csv(experiments, output_dir):
-    """Generate reading_summary.csv"""
+    """Generate reading_summary.csv with focus times for all tabs"""
     rows = []
     for exp in experiments:
         pid = normalize_participant_id(exp.get('participantId'))
@@ -288,6 +373,11 @@ def generate_reading_summary_csv(experiments, output_dir):
 
         focus_times = reading.get('focusTimes', {})
         cls_summary = reading.get('classificationSummary', {})
+        events = reading.get('events', [])
+        session_duration = reading.get('duration')
+
+        # Calculate video/audio/infographics times from events
+        calc_tab_times, _ = calculate_tab_times_from_events(events, session_duration)
 
         rows.append({
             'participantId': pid,
@@ -295,8 +385,14 @@ def generate_reading_summary_csv(experiments, output_dir):
             'reading_id': f"{exp_id}_reading",
             'totalEvents': reading.get('totalEvents'),
             'duration': reading.get('duration'),
+            # Focus times from Firebase (reading, chat)
             'focusTime_reading': focus_times.get('reading'),
             'focusTime_chat': focus_times.get('chat'),
+            # Focus times calculated from events (video, audio, infographics)
+            'focusTime_video': calc_tab_times.get('video', 0),
+            'focusTime_audio': calc_tab_times.get('audio', 0),
+            'focusTime_infographics': calc_tab_times.get('infographics', 0),
+            # Classification summary
             'reading_count': cls_summary.get('reading', {}).get('count'),
             'reading_totalDuration': cls_summary.get('reading', {}).get('totalDuration'),
             'scanning_count': cls_summary.get('scanning', {}).get('count'),
@@ -306,6 +402,40 @@ def generate_reading_summary_csv(experiments, output_dir):
         })
 
     write_csv(os.path.join(output_dir, 'reading_summary.csv'), rows)
+    return rows
+
+
+def generate_tab_segments_csv(experiments, output_dir):
+    """Generate tab_segments.csv with detailed segment data for each participant"""
+    rows = []
+    for exp in experiments:
+        pid = normalize_participant_id(exp.get('participantId'))
+        exp_id = exp.get('experimentId', exp.get('_experimentDocId'))
+        reading = exp.get('reading', {})
+
+        if not reading:
+            continue
+
+        events = reading.get('events', [])
+        session_duration = reading.get('duration')
+
+        if not events or not session_duration:
+            continue
+
+        _, segments = calculate_tab_times_from_events(events, session_duration)
+
+        for i, seg in enumerate(segments):
+            rows.append({
+                'participantId': pid,
+                'experimentId': exp_id,
+                'segment_index': i,
+                'tab': seg['tab'],
+                'start_ms': seg['start'],
+                'end_ms': seg['end'],
+                'duration_ms': seg['duration']
+            })
+
+    write_csv(os.path.join(output_dir, 'tab_segments.csv'), rows)
     return rows
 
 
@@ -725,7 +855,8 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 | experiments.csv | Experiment metadata |
 | reading_events.csv | Individual reading events |
 | reading_section_analysis.csv | Section-level reading analysis |
-| reading_summary.csv | Reading summary statistics |
+| reading_summary.csv | Reading summary statistics (includes focusTime for all tabs) |
+| tab_segments.csv | Detailed tab segments with start/end times |
 | survey.csv | Post-study survey responses |
 | pre-task.csv | Pre-task responses |
 | post-task.csv | Post-task responses |
@@ -782,6 +913,7 @@ def main():
     generate_reading_events_csv(filtered_data, OUTPUT_DIR)
     generate_reading_section_analysis_csv(filtered_data, OUTPUT_DIR)
     generate_reading_summary_csv(filtered_data, OUTPUT_DIR)
+    generate_tab_segments_csv(filtered_data, OUTPUT_DIR)
     generate_survey_csv(filtered_data, OUTPUT_DIR)
     generate_pretask_csv(filtered_data, OUTPUT_DIR)
     generate_posttask_csv(filtered_data, OUTPUT_DIR)

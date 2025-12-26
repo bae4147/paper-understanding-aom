@@ -1,6 +1,6 @@
 # Data Preprocessing Report
 
-Generated: 2025-12-24 02:12:45
+Generated: 2025-12-26 01:08:00
 
 ## Summary
 
@@ -67,7 +67,8 @@ None
 | experiments.csv | Experiment metadata |
 | reading_events.csv | Individual reading events |
 | reading_section_analysis.csv | Section-level reading analysis |
-| reading_summary.csv | Reading summary statistics |
+| reading_summary.csv | Reading summary statistics (includes focusTime for all tabs) |
+| tab_segments.csv | Detailed tab segments with start/end times |
 | survey.csv | Post-study survey responses |
 | pre-task.csv | Pre-task responses |
 | post-task.csv | Post-task responses |
