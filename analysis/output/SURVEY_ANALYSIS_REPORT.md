@@ -9,17 +9,6 @@
 
 **Scale**: 1 = Very Low, 7 = Very High
 
-### 기술 통계 (Mean ± SD)
-
-| Item | with_llm (n=98) | with_llm_extended (n=101) | without_llm (n=96) |
-|------|------|------|------|
-| Mental Demand | 4.76 ± 1.54 | 4.41 ± 1.5 | 4.77 ± 1.39 |
-| Physical Demand | 2.36 ± 1.83 | 2.11 ± 1.61 | 1.97 ± 1.37 |
-| Temporal Demand | 2.39 ± 1.56 | 2.33 ± 1.58 | 2.51 ± 1.54 |
-| Performance | 5.9 ± 0.92 | 5.82 ± 1.29 | 5.83 ± 1.05 |
-| Effort | 5.35 ± 1.67 | 5.33 ± 1.48 | 5.3 ± 1.43 |
-| Frustration | 2.48 ± 1.68 | 2.13 ± 1.48 | 2.38 ± 1.5 |
-
 ### 응답 분포 (with_llm)
 
 | Item | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
@@ -27,7 +16,6 @@
 | Mental Demand | 3.1% | 8.2% | 10.2% | 13.3% | 28.6% | 27.6% | 9.2% |
 | Physical Demand | 46.9% | 24.5% | 7.1% | 5.1% | 4.1% | 8.2% | 4.1% |
 | Temporal Demand | 38.8% | 24.5% | 13.3% | 14.3% | 4.1% | 2.0% | 3.1% |
-| Performance | 0.0% | 0.0% | 2.0% | 6.1% | 17.3% | 49.0% | 25.5% |
 | Effort | 3.1% | 5.1% | 9.2% | 6.1% | 21.4% | 23.5% | 31.6% |
 | Frustration | 42.9% | 18.4% | 9.2% | 14.3% | 10.2% | 3.1% | 2.0% |
 
@@ -37,23 +25,11 @@
 
 **Scale**: 1 = Strongly Disagree, 7 = Strongly Agree
 
-### 기술 통계 (Mean ± SD)
-
-| Item | with_llm (n=98) | with_llm_extended (n=101) | without_llm (n=96) |
-|------|------|------|------|
-| Overall Goal | 6.21 ± 0.8 | 6.14 ± 1.05 | 6.16 ± 0.99 |
-| Author's Reasoning | 6.09 ± 0.79 | 6.01 ± 1.05 | 6.17 ± 0.88 |
-| Connecting Ideas | 5.98 ± 1.03 | 5.92 ± 1.17 | 5.98 ± 0.96 |
-| Own Ideas | 5.41 ± 1.17 | 5.41 ± 1.26 | 5.46 ± 1.32 |
-| Alternative Perspectives | 4.4 ± 1.8 | 4.19 ± 1.59 | 4.22 ± 1.47 |
-| Verify Credibility | 4.32 ± 1.87 | 4.27 ± 1.84 | 4.36 ± 1.64 |
-| Question Claims | 4.26 ± 1.68 | 4.33 ± 1.82 | 4.53 ± 1.54 |
-| Broader Implications | 5.5 ± 1.17 | 5.67 ± 1.3 | 5.57 ± 1.24 |
-
 ### 응답 분포 (with_llm)
 
 | Item | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
 |------|---|---|---|---|---|---|---|
+| Performance | 0.0% | 0.0% | 2.0% | 6.1% | 17.3% | 49.0% | 25.5% |
 | Overall Goal | 0.0% | 0.0% | 0.0% | 4.1% | 11.2% | 43.9% | 40.8% |
 | Author's Reasoning | 0.0% | 0.0% | 0.0% | 2.0% | 20.4% | 43.9% | 33.7% |
 | Connecting Ideas | 0.0% | 1.0% | 2.0% | 5.1% | 15.3% | 42.9% | 33.7% |
@@ -68,16 +44,6 @@
 ## LLM Usefulness
 
 **Scale**: 1 = Strongly Disagree, 7 = Strongly Agree
-
-### 기술 통계 (Mean ± SD)
-
-| Item | with_llm (n=98) | with_llm_extended (n=101) |
-|------|------|------|
-| Overall | 4.11 ± 2.21 | 5.44 ± 1.66 |
-| Concept Help | 3.93 ± 2.12 | 5.21 ± 1.67 |
-| Findings Help | 4.15 ± 2.09 | 5.23 ± 1.59 |
-| Practical Help | 4.0 ± 2.14 | 5.09 ± 1.55 |
-| Time Saving | 3.78 ± 2.26 | 5.17 ± 1.92 |
 
 ### 응답 분포 (with_llm)
 
@@ -94,17 +60,6 @@
 ## LLM Trust
 
 **Scale**: 1 = Strongly Disagree, 7 = Strongly Agree
-
-### 기술 통계 (Mean ± SD)
-
-| Item | with_llm (n=98) | with_llm_extended (n=101) |
-|------|------|------|
-| Competence | 4.56 ± 1.7 | 5.68 ± 1.4 |
-| Accuracy | 4.69 ± 1.52 | 5.8 ± 1.25 |
-| Benevolence | 4.28 ± 1.75 | 5.17 ± 1.55 |
-| Reliability | 4.32 ± 1.72 | 4.65 ± 1.72 |
-| Comfort Acting | 3.97 ± 1.68 | 4.7 ± 1.72 |
-| Comfort Using | 4.19 ± 1.76 | 4.93 ± 1.7 |
 
 ### 응답 분포 (with_llm)
 
@@ -123,13 +78,6 @@
 
 **Scale**: 1-5 (Focus), 1 = Strongly Disagree (Check)
 
-### 기술 통계 (Mean ± SD)
-
-| Item | all (n=295) |
-|------|------|
-| Focus Level | 4.76 ± 0.54 |
-| Strongly Disagree Check | 1.22 ± 0.91 |
-
 ### 응답 분포 (전체 참여자)
 
 | Item | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
@@ -142,12 +90,6 @@
 ## AI Usage Frequency
 
 **Scale**: never / rarely / sometimes / often / very-often
-
-### 기술 통계 (Mean ± SD)
-
-| Item | all (n=295) |
-|------|------|
-| AI Usage Frequency | - |
 
 ### 응답 분포 (전체 참여자)
 
@@ -177,15 +119,29 @@
 
 | 성별 | 인원 | 비율 |
 |------|------|------|
-| female | 168 | 56.9% |
 | male | 126 | 42.7% |
+| female | 168 | 56.9% |
 | non-binary | 1 | 0.3% |
+
+### Ethnicity (민족)
+
+| 민족 | 인원 | 비율 |
+|------|------|------|
+| white | 226 | 76.6% |
+| black | 51 | 17.3% |
+| asian | 13 | 4.4% |
+| hispanic | 11 | 3.7% |
+| american-indian | 2 | 0.7% |
+| middle-eastern | 2 | 0.7% |
+| other | 4 | 1.4% |
+| prefer-not-to-answer | 2 | 0.7% |
 
 ### Education (학력)
 
 | 학력 | 인원 | 비율 |
 |------|------|------|
 | high-school | 48 | 16.3% |
+| associate | 21 | 7.1% |
 | bachelor | 137 | 46.4% |
 | master | 75 | 25.4% |
 | doctorate | 14 | 4.7% |
@@ -195,20 +151,71 @@
 | 수준 | 인원 | 비율 |
 |------|------|------|
 | native | 269 | 91.2% |
+| very-fluent | 26 | 8.8% |
 
----
+### Working Situation (근무 형태)
 
-## 인구통계 시각화 제안
+| 형태 | 인원 | 비율 |
+|------|------|------|
+| full-time | 286 | 96.9% |
+| part-time | 4 | 1.4% |
+| not-working | 5 | 1.7% |
 
-1. **Age**: 히스토그램 또는 박스플롯 (조건별 비교)
-2. **Gender**: 파이 차트 또는 도넛 차트
-3. **Education**: 수평 막대 차트 (순서대로 정렬)
-4. **English Proficiency**: 수평 막대 차트
+### Work Hours Per Week (주당 근무시간)
+- N = 292
+- Mean = 39.9 hours (SD = 5.4)
+- Range: 10 - 60
 
-### 추천 시각화 조합
-- **조건별 비교 시**: Grouped bar chart로 각 인구통계 변수의 조건별 분포 비교
-- **전체 샘플 기술 시**: 위 HTML 파일의 Demographics 섹션 참조
-- **논문/보고서용**: 표 형태 (본 문서의 표 활용)
+| 시간대 | 인원 | 비율 |
+|--------|------|------|
+| < 30 | 11 | 3.8% |
+| 30-40 | 215 | 73.6% |
+| 41-50 | 59 | 20.2% |
+| 51-60 | 7 | 2.4% |
+| > 60 | 0 | 0.0% |
+
+### Years in Organization (현 조직 근속연수)
+- N = 295
+- Mean = 7.2 years (SD = 6.9)
+
+| 연수 | 인원 | 비율 |
+|------|------|------|
+| 0-2 | 76 | 25.8% |
+| 3-5 | 84 | 28.5% |
+| 6-10 | 76 | 25.8% |
+| 11-20 | 38 | 12.9% |
+| 20+ | 21 | 7.1% |
+
+### Years in Job (현 직무 근속연수)
+- N = 295
+- Mean = 6.0 years (SD = 6.4)
+
+| 연수 | 인원 | 비율 |
+|------|------|------|
+| 0-2 | 99 | 33.6% |
+| 3-5 | 85 | 28.8% |
+| 6-10 | 70 | 23.7% |
+| 11-20 | 26 | 8.8% |
+| 20+ | 15 | 5.1% |
+
+### Industry (산업분야)
+
+| 산업 | 인원 | 비율 |
+|------|------|------|
+| Education | 51 | 17.3% |
+| Technology | 39 | 13.2% |
+| Healthcare | 39 | 13.2% |
+| Finance | 23 | 7.8% |
+| Manufacturing | 22 | 7.5% |
+| Retail | 18 | 6.1% |
+| Hospitality | 9 | 3.1% |
+| Government | 9 | 3.1% |
+| Real Estate | 7 | 2.4% |
+| Transportation & Logistics | 6 | 2.0% |
+| Construction | 6 | 2.0% |
+| Marketing | 6 | 2.0% |
+| Social Services | 5 | 1.7% |
+| Other | 55 | 18.6% |
 
 ---
 

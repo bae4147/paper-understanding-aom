@@ -22,7 +22,6 @@ SURVEY_GROUPS = {
             "nasaTLX_mentalDemand",
             "nasaTLX_physicalDemand",
             "nasaTLX_temporalDemand",
-            "nasaTLX_performance",
             "nasaTLX_effort",
             "nasaTLX_frustration"
         ],
@@ -30,16 +29,15 @@ SURVEY_GROUPS = {
             "Mental Demand",
             "Physical Demand",
             "Temporal Demand",
-            "Performance",
             "Effort",
             "Frustration"
         ],
         "scale": 7,
-        "scale_description": "1 = Very Low, 7 = Very High",
-        "reverse_items": ["nasaTLX_performance"]
+        "scale_description": "1 = Very Low, 7 = Very High"
     },
     "Self-Efficacy": {
         "items": [
+            "selfEfficacy_performance",
             "selfEfficacy_overallGoal",
             "selfEfficacy_authorsReasoning",
             "selfEfficacy_connectingIdeas",
@@ -50,6 +48,7 @@ SURVEY_GROUPS = {
             "selfEfficacy_broaderImplications"
         ],
         "labels": [
+            "Performance",
             "Overall Goal",
             "Author's Reasoning",
             "Connecting Ideas",
@@ -281,11 +280,13 @@ def analyze_demographics(survey):
         'n': total_gender,
         'distribution': {}
     }
-    for gender in gender_counts.index:
-        results['gender']['distribution'][gender] = {
-            'count': int(gender_counts[gender]),
-            'percentage': round(gender_counts[gender] / total_gender * 100, 1)
-        }
+    gender_order = ['male', 'female', 'non-binary', 'other', 'prefer-not-to-answer']
+    for gender in gender_order:
+        if gender in gender_counts.index:
+            results['gender']['distribution'][gender] = {
+                'count': int(gender_counts[gender]),
+                'percentage': round(gender_counts[gender] / total_gender * 100, 1)
+            }
 
     # Education
     edu_counts = survey['demographics_education'].value_counts()
@@ -294,7 +295,7 @@ def analyze_demographics(survey):
         'n': total_edu,
         'distribution': {}
     }
-    edu_order = ['high-school', 'some-college', 'bachelor', 'master', 'doctorate', 'other']
+    edu_order = ['high-school', 'associate', 'bachelor', 'master', 'doctorate', 'other']
     for edu in edu_order:
         if edu in edu_counts.index:
             results['education']['distribution'][edu] = {
@@ -309,12 +310,168 @@ def analyze_demographics(survey):
         'n': total_eng,
         'distribution': {}
     }
-    eng_order = ['native', 'fluent', 'advanced', 'intermediate', 'beginner']
+    eng_order = ['native', 'very-fluent', 'fluent', 'advanced', 'intermediate', 'beginner']
     for level in eng_order:
         if level in eng_counts.index:
             results['english_proficiency']['distribution'][level] = {
                 'count': int(eng_counts[level]),
                 'percentage': round(eng_counts[level] / total_eng * 100, 1)
+            }
+
+    # Working Situation
+    work_counts = survey['demographics_workingSituation'].value_counts()
+    total_work = len(survey['demographics_workingSituation'].dropna())
+    results['working_situation'] = {
+        'n': total_work,
+        'distribution': {}
+    }
+    work_order = ['full-time', 'part-time', 'not-working', 'other']
+    for status in work_order:
+        if status in work_counts.index:
+            results['working_situation']['distribution'][status] = {
+                'count': int(work_counts[status]),
+                'percentage': round(work_counts[status] / total_work * 100, 1)
+            }
+
+    # Work Hours Per Week
+    hours_data = survey['demographics_workHoursPerWeek'].dropna()
+    hours_data = hours_data[hours_data <= 80]  # Filter outliers
+    results['work_hours'] = {
+        'n': len(hours_data),
+        'mean': round(hours_data.mean(), 1),
+        'std': round(hours_data.std(), 1),
+        'min': int(hours_data.min()),
+        'max': int(hours_data.max()),
+        'distribution': {}
+    }
+    hours_bins = [0, 30, 40, 50, 60, 100]
+    hours_labels = ['< 30', '30-40', '41-50', '51-60', '> 60']
+    hours_groups = pd.cut(hours_data, bins=hours_bins, labels=hours_labels)
+    for label in hours_labels:
+        count = (hours_groups == label).sum()
+        results['work_hours']['distribution'][label] = {
+            'count': int(count),
+            'percentage': round(count / len(hours_data) * 100, 1)
+        }
+
+    # Years in Organization
+    years_org_data = survey['demographics_yearsInOrganization'].dropna()
+    results['years_in_organization'] = {
+        'n': len(years_org_data),
+        'mean': round(years_org_data.mean(), 1),
+        'std': round(years_org_data.std(), 1),
+        'min': round(years_org_data.min(), 1),
+        'max': round(years_org_data.max(), 1),
+        'distribution': {}
+    }
+    years_bins = [-1, 2, 5, 10, 20, 100]
+    years_labels = ['0-2', '3-5', '6-10', '11-20', '20+']
+    years_groups = pd.cut(years_org_data, bins=years_bins, labels=years_labels)
+    for label in years_labels:
+        count = (years_groups == label).sum()
+        results['years_in_organization']['distribution'][label] = {
+            'count': int(count),
+            'percentage': round(count / len(years_org_data) * 100, 1)
+        }
+
+    # Years in Job
+    years_job_data = survey['demographics_yearsInJob'].dropna()
+    results['years_in_job'] = {
+        'n': len(years_job_data),
+        'mean': round(years_job_data.mean(), 1),
+        'std': round(years_job_data.std(), 1),
+        'min': round(years_job_data.min(), 1),
+        'max': round(years_job_data.max(), 1),
+        'distribution': {}
+    }
+    years_job_groups = pd.cut(years_job_data, bins=years_bins, labels=years_labels)
+    for label in years_labels:
+        count = (years_job_groups == label).sum()
+        results['years_in_job']['distribution'][label] = {
+            'count': int(count),
+            'percentage': round(count / len(years_job_data) * 100, 1)
+        }
+
+    # Industry (normalized)
+    industry_data = survey['demographics_industry'].dropna().str.lower().str.strip()
+    industry_mapping = {
+        'education': 'Education', 'education ': 'Education', 'higher education': 'Education',
+        'adult education': 'Education', 'educator': 'Education', 'education, school': 'Education',
+        'healthcare': 'Healthcare', 'healthcare ': 'Healthcare', 'health': 'Healthcare',
+        'health care': 'Healthcare', 'mental health': 'Healthcare', 'mental healthcare': 'Healthcare',
+        'technology': 'Technology', 'technology ': 'Technology', 'tech services': 'Technology',
+        'technolgoy': 'Technology', 'techonology': 'Technology', 'technology/education': 'Technology',
+        'information technology': 'Technology', 'information technology ': 'Technology',
+        'it': 'Technology', 'info tech': 'Technology', 'information & technology': 'Technology',
+        'software ': 'Technology', 'web development': 'Technology',
+        'manufacturing': 'Manufacturing', 'manufacturing ': 'Manufacturing',
+        'finance': 'Finance', 'finance & insurance ': 'Finance', 'finance and insurance': 'Finance',
+        'financial services': 'Finance', 'banking': 'Finance', 'banking and finance': 'Finance',
+        'pensions': 'Finance', 'insurance': 'Finance',
+        'retail': 'Retail', 'retail ': 'Retail', 'retail grocery': 'Retail',
+        'wholesale retail': 'Retail', 'retail ecommerce': 'Retail', 'reatil': 'Retail', 'ecommerce': 'Retail',
+        'hospitality': 'Hospitality', 'hospitality ': 'Hospitality', 'events': 'Hospitality',
+        'events & catering': 'Hospitality', 'travel & tourism': 'Hospitality',
+        'construction': 'Construction', 'construction ': 'Construction',
+        'government': 'Government', 'government ': 'Government', 'local government': 'Government',
+        'public service local govy': 'Government', 'public sector': 'Government', 'civil service': 'Government',
+        'marketing': 'Marketing', 'marketing ': 'Marketing', 'marketing and advertising': 'Marketing',
+        'advertising': 'Marketing', 'pr': 'Marketing',
+        'legal': 'Legal', 'law': 'Legal',
+        'engineering': 'Engineering', 'engineering ': 'Engineering',
+        'transportation': 'Transportation & Logistics', 'transportation/warehousing': 'Transportation & Logistics',
+        'logistics': 'Transportation & Logistics', 'shipping': 'Transportation & Logistics',
+        'transport': 'Transportation & Logistics', 'warehousing': 'Transportation & Logistics',
+        'social care': 'Social Services', 'social charity': 'Social Services',
+        'not-for-profit/charity sector': 'Social Services', 'non-profit': 'Social Services',
+        'real estate': 'Real Estate', 'real estate ': 'Real Estate', 'housing': 'Real Estate',
+        'housing association': 'Real Estate', 'social housing': 'Real Estate', 'property': 'Real Estate',
+        'recruitment': 'Human Resources', 'human resources': 'Human Resources', 'staffing ': 'Human Resources',
+        'media': 'Media & Entertainment', 'media & entertainment': 'Media & Entertainment',
+        'entertainment': 'Media & Entertainment', 'gaming': 'Media & Entertainment',
+        'consulting': 'Consulting', 'professional services': 'Consulting',
+    }
+    normalized_industry = industry_data.map(lambda x: industry_mapping.get(x, x.title() if x else 'Other'))
+    industry_counts = normalized_industry.value_counts()
+    total_industry = len(normalized_industry)
+    results['industry'] = {
+        'n': total_industry,
+        'distribution': {}
+    }
+    other_count = 0
+    for industry in industry_counts.index:
+        count = int(industry_counts[industry])
+        if count >= 5:
+            results['industry']['distribution'][industry] = {
+                'count': count,
+                'percentage': round(count / total_industry * 100, 1)
+            }
+        else:
+            other_count += count
+    if other_count > 0:
+        results['industry']['distribution']['Other'] = {
+            'count': other_count,
+            'percentage': round(other_count / total_industry * 100, 1)
+        }
+
+    # Ethnicity
+    ethnicity_data = survey['demographics_ethnicity'].dropna()
+    total_ethnicity = len(ethnicity_data)
+    ethnicity_counts = {}
+    for value in ethnicity_data:
+        ethnicities = [e.strip() for e in str(value).split(',')]
+        for eth in ethnicities:
+            ethnicity_counts[eth] = ethnicity_counts.get(eth, 0) + 1
+    results['ethnicity'] = {
+        'n': total_ethnicity,
+        'distribution': {}
+    }
+    ethnicity_order = ['white', 'black', 'asian', 'hispanic', 'american-indian', 'middle-eastern', 'other', 'prefer-not-to-answer']
+    for eth in ethnicity_order:
+        if eth in ethnicity_counts:
+            results['ethnicity']['distribution'][eth] = {
+                'count': ethnicity_counts[eth],
+                'percentage': round(ethnicity_counts[eth] / total_ethnicity * 100, 1)
             }
 
     return results
@@ -766,10 +923,16 @@ def generate_html_visualization(all_results, demographics):
         const container = document.getElementById('demographics');
 
         const demoConfigs = [
-            { key: 'age', title: 'Age Distribution', subtitle: `Mean: ${demographicsData.age.mean} years` },
+            { key: 'age', title: 'Age Distribution', subtitle: `Mean: ${demographicsData.age.mean} years (SD: ${demographicsData.age.std})` },
             { key: 'gender', title: 'Gender' },
+            { key: 'ethnicity', title: 'Ethnicity' },
             { key: 'education', title: 'Education Level' },
-            { key: 'english_proficiency', title: 'English Proficiency' }
+            { key: 'english_proficiency', title: 'English Proficiency' },
+            { key: 'working_situation', title: 'Working Situation' },
+            { key: 'work_hours', title: 'Work Hours/Week', subtitle: `Mean: ${demographicsData.work_hours?.mean || '-'} hrs` },
+            { key: 'years_in_organization', title: 'Years in Organization', subtitle: `Mean: ${demographicsData.years_in_organization?.mean || '-'} yrs` },
+            { key: 'years_in_job', title: 'Years in Job', subtitle: `Mean: ${demographicsData.years_in_job?.mean || '-'} yrs` },
+            { key: 'industry', title: 'Industry' }
         ];
 
         let html = '';
@@ -901,6 +1064,13 @@ def generate_markdown_report(all_results, demographics):
         md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
     md += "\n"
 
+    md += f"### Ethnicity (민족)\n\n"
+    md += "| 민족 | 인원 | 비율 |\n"
+    md += "|------|------|------|\n"
+    for label, values in demographics['ethnicity']['distribution'].items():
+        md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
+    md += "\n"
+
     md += f"### Education (학력)\n\n"
     md += "| 학력 | 인원 | 비율 |\n"
     md += "|------|------|------|\n"
@@ -915,21 +1085,52 @@ def generate_markdown_report(all_results, demographics):
         md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
     md += "\n"
 
+    md += f"### Working Situation (근무 형태)\n\n"
+    md += "| 형태 | 인원 | 비율 |\n"
+    md += "|------|------|------|\n"
+    for label, values in demographics['working_situation']['distribution'].items():
+        md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
+    md += "\n"
+
+    md += f"### Work Hours Per Week (주당 근무시간)\n"
+    md += f"- N = {demographics['work_hours']['n']}\n"
+    md += f"- Mean = {demographics['work_hours']['mean']} hours (SD = {demographics['work_hours']['std']})\n"
+    md += f"- Range: {demographics['work_hours']['min']} - {demographics['work_hours']['max']}\n\n"
+
+    md += "| 시간대 | 인원 | 비율 |\n"
+    md += "|--------|------|------|\n"
+    for label, values in demographics['work_hours']['distribution'].items():
+        md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
+    md += "\n"
+
+    md += f"### Years in Organization (현 조직 근속연수)\n"
+    md += f"- N = {demographics['years_in_organization']['n']}\n"
+    md += f"- Mean = {demographics['years_in_organization']['mean']} years (SD = {demographics['years_in_organization']['std']})\n\n"
+
+    md += "| 연수 | 인원 | 비율 |\n"
+    md += "|------|------|------|\n"
+    for label, values in demographics['years_in_organization']['distribution'].items():
+        md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
+    md += "\n"
+
+    md += f"### Years in Job (현 직무 근속연수)\n"
+    md += f"- N = {demographics['years_in_job']['n']}\n"
+    md += f"- Mean = {demographics['years_in_job']['mean']} years (SD = {demographics['years_in_job']['std']})\n\n"
+
+    md += "| 연수 | 인원 | 비율 |\n"
+    md += "|------|------|------|\n"
+    for label, values in demographics['years_in_job']['distribution'].items():
+        md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
+    md += "\n"
+
+    md += f"### Industry (산업분야)\n\n"
+    md += "| 산업 | 인원 | 비율 |\n"
+    md += "|------|------|------|\n"
+    for label, values in demographics['industry']['distribution'].items():
+        md += f"| {label} | {values['count']} | {values['percentage']}% |\n"
+    md += "\n"
+
     md += """---
-
-## 인구통계 시각화 제안
-
-1. **Age**: 히스토그램 또는 박스플롯 (조건별 비교)
-2. **Gender**: 파이 차트 또는 도넛 차트
-3. **Education**: 수평 막대 차트 (순서대로 정렬)
-4. **English Proficiency**: 수평 막대 차트
-
-### 추천 시각화 조합
-- **조건별 비교 시**: Grouped bar chart로 각 인구통계 변수의 조건별 분포 비교
-- **전체 샘플 기술 시**: 위 HTML 파일의 Demographics 섹션 참조
-- **논문/보고서용**: 표 형태 (본 문서의 표 활용)
-
----
 
 ## 생성된 파일
 
