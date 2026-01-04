@@ -268,8 +268,11 @@
                         throw new Error('Missing experimentId');
                     }
 
+                    console.log('💾 Post-study survey data:', surveyData);
+
+                    // Firebase saving disabled
+                    /*
                     console.log('💾 Saving post-study survey to:', experimentId);
-                    console.log('💾 Data:', surveyData);
 
                     // Save survey data to users/{participantId}/experiments/{experimentId}
                     const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc(experimentId);
@@ -289,6 +292,7 @@
                     });
 
                     console.log('✅ User status updated to completed');
+                    */
 
                     // Navigate to completion page
                     window.location.href = `complete.html?participantId=${participantId}`;

@@ -62,13 +62,14 @@
                     const counts = doc.data() || {
                         without_llm: 0,
                         with_llm: 0,
-                        with_llm_extended: 0
+                        with_llm_extended: 0,
+                        with_socratic: 0
                     };
 
                     // Determine which conditions are available based on audio
                     const availableConditions = audioAvailable
-                        ? ['without_llm', 'with_llm', 'with_llm_extended']
-                        : ['without_llm', 'with_llm'];
+                        ? ['without_llm', 'with_llm', 'with_llm_extended', 'with_socratic']
+                        : ['without_llm', 'with_llm', 'with_socratic'];
 
                     // Find condition with minimum count among available ones
                     let minCondition = availableConditions[0];
@@ -108,9 +109,17 @@
                     if (mode === 'test' && condition) {
                         assignedCondition = condition;
                     } else {
-                        assignedCondition = await assignCondition();
+                        // Firebase saving disabled - use random assignment
+                        const availableConditions = audioAvailable
+                            ? ['without_llm', 'with_llm', 'with_llm_extended', 'with_socratic']
+                            : ['without_llm', 'with_llm', 'with_socratic'];
+                        assignedCondition = availableConditions[Math.floor(Math.random() * availableConditions.length)];
                     }
 
+                    // Firebase saving disabled - generate local experimentId
+                    const experimentId = 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+                    /* Firebase saving disabled
                     // Step 2: Create new experiment document
                     const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc();
                     const experimentId = experimentRef.id;
@@ -137,9 +146,10 @@
                         currentExperimentId: experimentId,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
+                    */
 
-                    // Navigate to pre-task
-                    window.location.href = `pre-task.html?participantId=${participantId}&experimentId=${experimentId}&mode=${mode}&condition=${assignedCondition}&paper=${paper}`;
+                    // Navigate directly to main experiment (skip pre-task)
+                    window.location.href = `index.html?participantId=${participantId}&experimentId=${experimentId}&mode=${mode}&condition=${assignedCondition}&paper=${paper}`;
 
                 } catch (error) {
                     console.error('Error saving consent:', error);

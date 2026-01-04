@@ -115,7 +115,7 @@
             const [phase, setPhase] = useState('setup'); // setup, reading-guide, reading, quiz-guide, quiz, review-guide, review, complete
             const [participantId, setParticipantId] = useState('');
             const [experimentId, setExperimentId] = useState('');
-            const [condition, setCondition] = useState('without_llm'); // without_llm, with_llm, with_llm_extended
+            const [condition, setCondition] = useState('without_llm'); // without_llm, with_llm, with_llm_extended, with_socratic
             const [currentPaper, setCurrentPaper] = useState('mroz2018'); // Default paper
             // Use experimentId as experimentId for consistent data storage
             const [showFinishPopup, setShowFinishPopup] = useState(false);
@@ -242,6 +242,27 @@
             const [chatHistory, setChatHistory] = useState([]);
             const chatMessagesEndRef = useRef(null);
             const textareaRef = useRef(null);
+
+            // Socratic Question state (for with_socratic condition)
+            const [socraticPanelOpen, setSocraticPanelOpen] = useState(false);
+            const [socraticActiveSection, setSocraticActiveSection] = useState(null);
+            const [socraticQuestions, setSocraticQuestions] = useState({}); // { sectionName: { question, initialAnswer, feedback, revisedAnswer, status, category } }
+            const [socraticInputAnswer, setSocraticInputAnswer] = useState('');
+            const [socraticRevisedAnswer, setSocraticRevisedAnswer] = useState('');
+            const [socraticIsGenerating, setSocraticIsGenerating] = useState(false);
+            const [socraticIsFeedbackLoading, setSocraticIsFeedbackLoading] = useState(false);
+            const [socraticSelectedCategory, setSocraticSelectedCategory] = useState(''); // Selected question category
+            const [socraticShowCategorySelector, setSocraticShowCategorySelector] = useState(false); // Show category selector
+            const socraticPanelRef = useRef(null);
+
+            // Socratic question categories
+            const socraticCategories = [
+                { id: 'CLARIFICATION', label: 'Clarification', description: 'Ask for clarification of ambiguous or underspecified terms, claims, or meanings.' },
+                { id: 'PROBING_ASSUMPTIONS', label: 'Probing Assumptions', description: 'Question an implicit assumption underlying a claim or interpretation.' },
+                { id: 'PROBING_REASONS', label: 'Probing Reasons/Evidence', description: 'Ask about the reasoning, justification, or evidence supporting a claim.' },
+                { id: 'PROBING_IMPLICATIONS', label: 'Probing Implications', description: 'Explore potential consequences or downstream effects if the claims are true.' },
+                { id: 'PROBING_ALTERNATIVES', label: 'Probing Alternatives', description: 'Invite consideration of alternative interpretations, explanations, or approaches.' }
+            ];
 
             // Timer tracking
             const phaseStartTime = useRef(Date.now());
@@ -384,10 +405,14 @@
                 },
             ]);
 
-            // Section boundaries
+            // Section boundaries - will be populated dynamically from paper content
             const [sectionBoundaries, setSectionBoundaries] = useState({
-                'Abstract': { start: 0, end: 200 },
-                'Introduction': { start: 200, end: 800 },
+                'Abstract': { start: 0, end: 300 },
+                'Introduction': { start: 300, end: 800 },
+                'The Science of Meetings': { start: 800, end: 1400 },
+                'Applying Meeting Science': { start: 1400, end: 3000 },
+                'The Future of Meeting Science': { start: 3000, end: 4000 },
+                'References': { start: 4000, end: 5000 }
             });
 
             // Initialize from URL parameters (when coming from pre-task)
@@ -449,6 +474,164 @@
             useEffect(() => {
                 window.currentPhase = phase;
             }, [phase]);
+
+            // Dynamically detect section boundaries after paper content is loaded
+            useEffect(() => {
+                if (!paperContent || phase !== 'reading') return;
+
+                // Wait for DOM to update
+                setTimeout(() => {
+                    const paperContentEl = document.getElementById('paper-content');
+                    if (!paperContentEl) return;
+
+                    const sectionElements = paperContentEl.querySelectorAll('[data-section]');
+                    const newBoundaries = {};
+                    const containerTop = paperContentEl.getBoundingClientRect().top;
+
+                    sectionElements.forEach((el, index) => {
+                        const sectionName = el.getAttribute('data-section');
+                        const rect = el.getBoundingClientRect();
+                        const start = rect.top - containerTop + paperContentEl.scrollTop;
+
+                        // Find next section's start for end boundary
+                        const nextEl = sectionElements[index + 1];
+                        const end = nextEl
+                            ? nextEl.getBoundingClientRect().top - containerTop + paperContentEl.scrollTop
+                            : start + 2000; // Default end for last section
+
+                        newBoundaries[sectionName] = { start: Math.max(0, start - 100), end };
+                    });
+
+                    if (Object.keys(newBoundaries).length > 0) {
+                        setSectionBoundaries(newBoundaries);
+                        console.log('📚 Section boundaries detected:', Object.keys(newBoundaries));
+                    }
+                }, 500);
+            }, [paperContent, phase]);
+
+            // Inject Socratic question buttons in the right margin (floating beside sections)
+            useEffect(() => {
+                if (condition !== 'with_socratic' || phase !== 'reading' || !paperContent) return;
+
+                setTimeout(() => {
+                    const paperContentEl = document.getElementById('paper-content');
+                    if (!paperContentEl) return;
+
+                    // Get or create the buttons container
+                    let buttonsContainer = document.getElementById('socratic-buttons-container');
+                    if (!buttonsContainer) {
+                        buttonsContainer = document.createElement('div');
+                        buttonsContainer.id = 'socratic-buttons-container';
+                        buttonsContainer.style.cssText = `
+                            position: absolute;
+                            left: calc(100% + 20px);
+                            top: 0;
+                            width: 40px;
+                            pointer-events: auto;
+                        `;
+                        paperContentEl.style.position = 'relative';
+                        paperContentEl.appendChild(buttonsContainer);
+                    }
+
+                    // Clear existing buttons
+                    buttonsContainer.innerHTML = '';
+
+                    const sectionElements = paperContentEl.querySelectorAll('[data-section]');
+                    sectionElements.forEach(el => {
+                        const sectionName = el.getAttribute('data-section');
+                        if (sectionName === 'References') return;
+
+                        const rect = el.getBoundingClientRect();
+                        const containerRect = paperContentEl.getBoundingClientRect();
+                        const topOffset = rect.top - containerRect.top + paperContentEl.scrollTop;
+
+                        // Create button wrapper
+                        const wrapper = document.createElement('div');
+                        wrapper.style.cssText = `
+                            position: absolute;
+                            top: ${topOffset}px;
+                            left: 0;
+                        `;
+
+                        // Create button
+                        const btn = document.createElement('button');
+                        btn.className = 'socratic-btn';
+                        btn.setAttribute('data-section', sectionName);
+                        btn.innerHTML = '❓';
+                        btn.title = `${sectionName}`;
+                        btn.style.cssText = `
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            width: 32px;
+                            height: 32px;
+                            padding: 0;
+                            background: linear-gradient(135deg, #9333ea, #7c3aed);
+                            color: white;
+                            border: none;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            font-size: 14px;
+                            transition: all 0.2s;
+                            box-shadow: 0 2px 6px rgba(147, 51, 234, 0.3);
+                        `;
+                        btn.onmouseenter = () => {
+                            btn.style.transform = 'scale(1.15)';
+                            btn.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.4)';
+                        };
+                        btn.onmouseleave = () => {
+                            if (!btn.classList.contains('active')) {
+                                btn.style.transform = 'scale(1)';
+                                btn.style.boxShadow = '0 2px 6px rgba(147, 51, 234, 0.3)';
+                            }
+                        };
+                        btn.onclick = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openCategorySelector(sectionName);
+                        };
+
+                        wrapper.appendChild(btn);
+                        buttonsContainer.appendChild(wrapper);
+                    });
+                }, 700);
+            }, [paperContent, phase, condition]);
+
+            // Update Socratic buttons when questions change
+            useEffect(() => {
+                if (condition !== 'with_socratic' || phase !== 'reading') return;
+
+                const buttons = document.querySelectorAll('#socratic-buttons-container .socratic-btn');
+                buttons.forEach(btn => {
+                    const sectionName = btn.getAttribute('data-section');
+                    if (!sectionName) return;
+
+                    const hasQuestion = !!socraticQuestions[sectionName]?.question;
+                    const isCompleted = socraticQuestions[sectionName]?.status === 'revised_answered';
+                    const isActive = socraticActiveSection === sectionName;
+
+                    if (isCompleted) {
+                        btn.innerHTML = '✅';
+                        btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                    } else if (hasQuestion) {
+                        btn.innerHTML = '💬';
+                        btn.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+                    } else {
+                        btn.innerHTML = '❓';
+                        btn.style.background = 'linear-gradient(135deg, #9333ea, #7c3aed)';
+                    }
+
+                    if (isActive) {
+                        btn.classList.add('active');
+                        btn.style.transform = 'scale(1.15)';
+                        btn.style.boxShadow = '0 0 0 3px rgba(147, 51, 234, 0.4), 0 4px 12px rgba(147, 51, 234, 0.3)';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.style.transform = 'scale(1)';
+                        btn.style.boxShadow = '0 2px 6px rgba(147, 51, 234, 0.3)';
+                    }
+                });
+            }, [socraticQuestions, socraticActiveSection, condition, phase]);
 
             // Load resources for extended condition
             useEffect(() => {
@@ -529,9 +712,10 @@
             // Auto-save on browser close
             useEffect(() => {
                 const handleBeforeUnload = (e) => {
-                    if (phase === 'reading' && unsavedEventsCount.current > 0) {
-                        saveEventsToFirebase(events, false);
-                    }
+                    // Firebase saving disabled
+                    // if (phase === 'reading' && unsavedEventsCount.current > 0) {
+                    //     saveEventsToFirebase(events, false);
+                    // }
                     // Skip warning if we're intentionally redirecting
                     if ((phase === 'reading' || phase === 'quiz' || phase === 'review') && !isRedirecting) {
                         e.preventDefault();
@@ -552,6 +736,8 @@
             }, [messages, isLoading]);
 
             // Update experiment document (merge to preserve pre-task data)
+            // Firebase saving disabled
+            /*
             useEffect(() => {
                 const updateExperimentDoc = async () => {
                     if (phase === 'reading-guide' && participantId && experimentId && currentPaper) {
@@ -581,6 +767,7 @@
                 };
                 updateExperimentDoc();
             }, [phase]);
+            */
 
             // Calculate section boundaries when entering reading phase
             useEffect(() => {
@@ -609,6 +796,8 @@
             }, [phase, paperContent]);
 
             // Save events to Firebase
+            // Firebase saving disabled
+            /*
             const saveEventsToFirebase = async (eventsBatch, isPartialSave = true) => {
                 if (isSaving.current) return false;
                 isSaving.current = true;
@@ -687,6 +876,7 @@
                     return false;
                 }
             };
+            */
 
             // Log event
             const logEvent = async (eventType, additionalData = {}) => {
@@ -712,12 +902,13 @@
                 setEvents(prev => {
                     const newEvents = [...prev, event];
 
-                    if (phase === 'reading') {
-                        unsavedEventsCount.current++;
-                        if (unsavedEventsCount.current >= 20) {
-                            saveEventsToFirebase(newEvents, true);
-                        }
-                    }
+                    // Firebase saving disabled
+                    // if (phase === 'reading') {
+                    //     unsavedEventsCount.current++;
+                    //     if (unsavedEventsCount.current >= 20) {
+                    //         saveEventsToFirebase(newEvents, true);
+                    //     }
+                    // }
 
                     return newEvents;
                 });
@@ -1165,6 +1356,348 @@ Use markdown formatting for better readability:
                 }
             };
 
+            // Socratic Question: Open category selector for a section
+            const openCategorySelector = (sectionName) => {
+                if (socraticQuestions[sectionName]?.question) {
+                    // Already generated, just open the panel
+                    setSocraticActiveSection(sectionName);
+                    setSocraticPanelOpen(true);
+                    return;
+                }
+
+                setSocraticActiveSection(sectionName);
+                setSocraticShowCategorySelector(true);
+                setSocraticSelectedCategory('');
+            };
+
+            // Socratic Question: Generate question for a section with selected category
+            const generateSocraticQuestion = async (sectionName, category) => {
+                if (!category) return;
+
+                setSocraticShowCategorySelector(false);
+                setSocraticIsGenerating(true);
+                setSocraticPanelOpen(true);
+
+                const apiKey = '__OPENAI_API_KEY__';
+                const requestTime = Date.now();
+
+                // Get section content from the paper
+                const sectionElement = document.querySelector(`[data-section="${sectionName}"]`);
+                let sectionContent = '';
+                if (sectionElement) {
+                    let currentEl = sectionElement;
+                    while (currentEl.nextElementSibling && !currentEl.nextElementSibling.hasAttribute('data-section')) {
+                        currentEl = currentEl.nextElementSibling;
+                        sectionContent += currentEl.textContent + '\n';
+                    }
+                }
+
+                const categoryLabel = socraticCategories.find(c => c.id === category)?.label || category;
+
+                logEvent('socratic_question_requested', {
+                    section: sectionName,
+                    category: category,
+                    timestamp: requestTime
+                });
+
+                try {
+                    // Test mode: use mock questions
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const isTestMode = urlParams.get('mode') === 'test';
+
+                    let generatedQuestion;
+
+                    if (isTestMode || apiKey === '__OPENAI_API_KEY__') {
+                        // Mock questions for testing by category
+                        const mockQuestionsByCategory = {
+                            'CLARIFICATION': `What exactly do the authors mean when they refer to "${sectionName}" in this context?`,
+                            'PROBING_ASSUMPTIONS': `What underlying assumption in this section might need further examination?`,
+                            'PROBING_REASONS': `What evidence or reasoning supports the main claim in this section?`,
+                            'PROBING_IMPLICATIONS': `If the claims in this section are true, what consequences might follow?`,
+                            'PROBING_ALTERNATIVES': `What alternative interpretation or approach might the authors have considered?`
+                        };
+                        generatedQuestion = mockQuestionsByCategory[category] || `What are the key implications of this section?`;
+
+                        // Simulate API delay
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } else {
+                        const systemPrompt = `You are an AI assistant trained to generate Socratic questions following an educational taxonomy.
+
+A Socratic question:
+- Asks a question only (no explanation or answer)
+- Does not introduce new information
+- Encourages critical reflection on the reasoning, assumptions, evidence, alternatives, implications, or meaning in the given text
+
+Socratic Question Categories:
+
+1. CLARIFICATION
+Ask for clarification of ambiguous or underspecified terms, claims, or meanings.
+
+2. PROBING_ASSUMPTIONS
+Question an implicit assumption underlying a claim or interpretation.
+
+3. PROBING_REASONS
+Ask about the reasoning, justification, or evidence supporting a claim.
+
+4. PROBING_IMPLICATIONS
+Explore potential consequences or downstream effects if the claims are true.
+
+5. PROBING_ALTERNATIVES
+Invite consideration of alternative interpretations, explanations, or approaches.
+
+––––––––––––––––––––––––––––––––––––
+Task:
+
+Given the section below and a specified question category,
+generate EXACTLY ONE Socratic question grounded in the text.
+
+Rules:
+- Ask only ONE question.
+- Do NOT explain or answer.
+- Do NOT introduce external knowledge.
+- Use neutral, non-leading language.`;
+
+                        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: 'gpt-4o-mini',
+                                messages: [
+                                    {
+                                        role: 'system',
+                                        content: systemPrompt
+                                    },
+                                    {
+                                        role: 'user',
+                                        content: `Section:\n${sectionContent}\n\nQuestion Category:\n${category}\n\nSocratic Question:`
+                                    }
+                                ],
+                                max_tokens: 200,
+                                temperature: 0.7
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('API request failed');
+                        }
+
+                        const data = await response.json();
+                        generatedQuestion = data.choices[0].message.content.trim();
+                    }
+
+                    const responseTime = Date.now();
+
+                    setSocraticQuestions(prev => ({
+                        ...prev,
+                        [sectionName]: {
+                            question: generatedQuestion,
+                            category: category,
+                            categoryLabel: categoryLabel,
+                            initialAnswer: '',
+                            feedback: '',
+                            revisedAnswer: '',
+                            status: 'question_generated', // question_generated, initial_answered, feedback_received, revised_answered
+                            generatedAt: responseTime
+                        }
+                    }));
+
+                    logEvent('socratic_question_generated', {
+                        section: sectionName,
+                        category: category,
+                        question: generatedQuestion,
+                        responseTime: responseTime - requestTime,
+                        timestamp: responseTime
+                    });
+
+                } catch (error) {
+                    console.error('Error generating Socratic question:', error);
+                    setSocraticQuestions(prev => ({
+                        ...prev,
+                        [sectionName]: {
+                            question: 'Failed to generate question. Please try again.',
+                            status: 'error'
+                        }
+                    }));
+                } finally {
+                    setSocraticIsGenerating(false);
+                }
+            };
+
+            // Socratic Question: Submit initial answer and get feedback
+            const submitSocraticAnswer = async (isRevised = false) => {
+                if (!socraticActiveSection) return;
+
+                const currentAnswer = isRevised ? socraticRevisedAnswer : socraticInputAnswer;
+                if (!currentAnswer.trim()) return;
+
+                const sectionData = socraticQuestions[socraticActiveSection];
+                if (!sectionData) return;
+
+                if (!isRevised) {
+                    setSocraticIsFeedbackLoading(true);
+                }
+
+                const apiKey = '__OPENAI_API_KEY__';
+                const requestTime = Date.now();
+
+                // Get section content
+                const sectionElement = document.querySelector(`[data-section="${socraticActiveSection}"]`);
+                let sectionContent = '';
+                if (sectionElement) {
+                    let currentEl = sectionElement;
+                    while (currentEl.nextElementSibling && !currentEl.nextElementSibling.hasAttribute('data-section')) {
+                        currentEl = currentEl.nextElementSibling;
+                        sectionContent += currentEl.textContent + '\n';
+                    }
+                }
+
+                if (isRevised) {
+                    // Save revised answer without getting new feedback
+                    setSocraticQuestions(prev => ({
+                        ...prev,
+                        [socraticActiveSection]: {
+                            ...prev[socraticActiveSection],
+                            revisedAnswer: currentAnswer,
+                            status: 'revised_answered',
+                            revisedAt: requestTime
+                        }
+                    }));
+
+                    logEvent('socratic_revised_answer_submitted', {
+                        section: socraticActiveSection,
+                        question: sectionData.question,
+                        initialAnswer: sectionData.initialAnswer,
+                        revisedAnswer: currentAnswer,
+                        timestamp: requestTime
+                    });
+
+                    setSocraticRevisedAnswer('');
+                    return;
+                }
+
+                // Save initial answer first
+                setSocraticQuestions(prev => ({
+                    ...prev,
+                    [socraticActiveSection]: {
+                        ...prev[socraticActiveSection],
+                        initialAnswer: currentAnswer,
+                        status: 'initial_answered',
+                        initialAnsweredAt: requestTime
+                    }
+                }));
+
+                logEvent('socratic_initial_answer_submitted', {
+                    section: socraticActiveSection,
+                    question: sectionData.question,
+                    answer: currentAnswer,
+                    timestamp: requestTime
+                });
+
+                try {
+                    // Test mode: use mock feedback
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const isTestMode = urlParams.get('mode') === 'test';
+
+                    let feedback;
+
+                    if (isTestMode || apiKey === '__OPENAI_API_KEY__') {
+                        // Mock feedback for testing
+                        feedback = `Good start! You've touched on some important points. However, consider exploring the broader implications more deeply. For instance, how might the authors' perspective on this topic change if applied to different organizational contexts? Also, think about what counterarguments might challenge the authors' main claims. Try to revise your answer with these considerations in mind.`;
+
+                        // Simulate API delay
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                    } else {
+                        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: 'gpt-4o-mini',
+                                messages: [
+                                    {
+                                        role: 'system',
+                                        content: `You are an expert research mentor providing constructive feedback to help junior researchers develop critical thinking skills.
+
+Your task is to evaluate a reader's answer to a critical thinking question about an academic paper section and provide helpful feedback.
+
+Your feedback should:
+1. Acknowledge what the reader did well (if applicable)
+2. Identify gaps or areas that could be improved
+3. Suggest specific aspects they could consider to deepen their analysis
+4. Be encouraging but also challenge them to think more critically
+5. Be concise (3-5 sentences)
+
+Focus on helping the reader develop their analytical skills, not just giving them the "correct" answer. Ask follow-up questions or suggest alternative perspectives they might consider.`
+                                    },
+                                    {
+                                        role: 'user',
+                                        content: `Section: ${socraticActiveSection}
+
+Section Content:
+${sectionContent}
+
+Critical Thinking Question: ${sectionData.question}
+
+Reader's Answer: ${currentAnswer}
+
+Provide constructive feedback to help the reader think more critically about this question.`
+                                    }
+                                ],
+                                max_tokens: 400,
+                                temperature: 0.7
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('API request failed');
+                        }
+
+                        const data = await response.json();
+                        feedback = data.choices[0].message.content.trim();
+                    }
+                    const responseTime = Date.now();
+
+                    setSocraticQuestions(prev => ({
+                        ...prev,
+                        [socraticActiveSection]: {
+                            ...prev[socraticActiveSection],
+                            feedback: feedback,
+                            status: 'feedback_received',
+                            feedbackReceivedAt: responseTime
+                        }
+                    }));
+
+                    logEvent('socratic_feedback_received', {
+                        section: socraticActiveSection,
+                        question: sectionData.question,
+                        answer: currentAnswer,
+                        feedback: feedback,
+                        responseTime: responseTime - requestTime,
+                        timestamp: responseTime
+                    });
+
+                    setSocraticInputAnswer('');
+
+                } catch (error) {
+                    console.error('Error getting Socratic feedback:', error);
+                    setSocraticQuestions(prev => ({
+                        ...prev,
+                        [socraticActiveSection]: {
+                            ...prev[socraticActiveSection],
+                            feedback: 'Failed to get feedback. Please try again.',
+                            status: 'feedback_error'
+                        }
+                    }));
+                } finally {
+                    setSocraticIsFeedbackLoading(false);
+                }
+            };
+
             // Markdown renderer with nested lists, tables, blockquotes, and horizontal rules
             const renderMarkdown = (text) => {
                 if (!text) return '';
@@ -1474,6 +2007,8 @@ Use markdown formatting for better readability:
                 });
 
                 // Save to Firebase
+                // Firebase saving disabled
+                /*
                 try {
                     if (window.firebaseDb && participantId && experimentId) {
                         const experimentRef = window.firebaseDoc(
@@ -1489,7 +2024,10 @@ Use markdown formatting for better readability:
                              e.eventType === 'audio_play' || e.eventType === 'audio_pause' ||
                              e.eventType === 'audio_ended' || e.eventType === 'audio_seeked' ||
                              e.eventType === 'video_play' || e.eventType === 'video_pause' ||
-                             e.eventType === 'video_ended' || e.eventType === 'video_seeked')
+                             e.eventType === 'video_ended' || e.eventType === 'video_seeked' ||
+                             e.eventType === 'socratic_question_requested' || e.eventType === 'socratic_question_generated' ||
+                             e.eventType === 'socratic_initial_answer_submitted' || e.eventType === 'socratic_feedback_received' ||
+                             e.eventType === 'socratic_revised_answer_submitted')
                         );
 
                         if (finalEvent) {
@@ -1546,12 +2084,21 @@ Use markdown formatting for better readability:
                             }
                         }
 
+                        // Save Socratic question data
+                        if (condition === 'with_socratic' && Object.keys(socraticQuestions).length > 0) {
+                            updateData['socraticInteraction.questions'] = socraticQuestions;
+                            updateData['socraticInteraction.totalQuestionsGenerated'] = Object.keys(socraticQuestions).length;
+                            updateData['socraticInteraction.questionsAnswered'] = Object.values(socraticQuestions).filter(q => q.initialAnswer).length;
+                            updateData['socraticInteraction.revisedAnswers'] = Object.values(socraticQuestions).filter(q => q.revisedAnswer).length;
+                        }
+
                         await window.firebaseUpdateDoc(experimentRef, updateData);
                         console.log('✅ Reading phase data saved');
                     }
                 } catch (error) {
                     console.error('❌ Failed to save reading data:', error);
                 }
+                */
 
                 setShowFinishPopup(false);  // Reset popup state
                 setPhase('quiz-guide');
@@ -1606,6 +2153,8 @@ Use markdown formatting for better readability:
                 // Set redirecting flag to prevent beforeunload warning (don't change phase to avoid flash)
                 setIsRedirecting(true);
 
+                // Firebase saving disabled
+                /*
                 try {
                     if (window.firebaseDb && participantId && experimentId) {
                         const experimentRef = window.firebaseDoc(
@@ -1629,6 +2178,7 @@ Use markdown formatting for better readability:
                 } catch (error) {
                     console.error('❌ Failed to save quiz data:', error);
                 }
+                */
 
                 // Redirect to post-task.html
                 logEvent('quiz_completed_redirecting');
@@ -1657,6 +2207,8 @@ Use markdown formatting for better readability:
                 phaseTimers.current.review = reviewDuration;
                 logEvent('review_phase_complete', { reviewData, duration: reviewDuration });
 
+                // Firebase saving disabled
+                /*
                 try {
                     if (window.firebaseDb && participantId && experimentId) {
                         const experimentRef = window.firebaseDoc(
@@ -1679,6 +2231,7 @@ Use markdown formatting for better readability:
                 } catch (error) {
                     console.error('❌ Failed to complete experiment:', error);
                 }
+                */
 
                 setPhase('complete');
                 logEvent('experiment_complete');
@@ -1838,6 +2391,31 @@ Use markdown formatting for better readability:
             // READING PHASE
             if (phase === 'reading') {
                 const showRightPanel = condition === 'with_llm' || condition === 'with_llm_extended';
+                const showSocraticPanel = condition === 'with_socratic';
+
+                // Socratic Question Icon component
+                const SocraticQuestionIcon = () => (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                );
+
+                // Get available sections from paper content
+                const getAvailableSections = () => {
+                    const sections = [];
+                    const sectionElements = document.querySelectorAll('[data-section]');
+                    sectionElements.forEach(el => {
+                        const sectionName = el.getAttribute('data-section');
+                        if (sectionName && sectionName !== 'References') {
+                            sections.push(sectionName);
+                        }
+                    });
+                    return sections;
+                };
+
+                // Socratic Panel moved to inline right margin - no popup needed
 
                 // Chat UI - inline JSX to prevent re-mount on re-render
                 const chatUI = (
@@ -2057,13 +2635,192 @@ Use markdown formatting for better readability:
                                     onMouseUp={handleTextSelection}
                                     className="flex-1 overflow-y-auto p-8"
                                 >
-                                    <div className="w-full max-w-[900px] mx-auto p-12">
-                                        <div
-                                            id="paper-content"
-                                            className="prose max-w-none"
-                                            dangerouslySetInnerHTML={{ __html: paperContent || '<p>Loading paper...</p>' }}
-                                        />
-                                    </div>
+                                    {condition === 'with_socratic' ? (
+                                        /* Socratic condition: paper on left, questions on right margin */
+                                        <div className="flex gap-6 max-w-[1400px] mx-auto">
+                                            {/* Paper content - narrower to make room for margin */}
+                                            <div className="flex-1 max-w-[700px] p-8">
+                                                <div
+                                                    id="paper-content"
+                                                    className="prose max-w-none"
+                                                    dangerouslySetInnerHTML={{ __html: paperContent || '<p>Loading paper...</p>' }}
+                                                />
+                                            </div>
+                                            {/* Right margin for Socratic questions */}
+                                            <div className="w-[320px] flex-shrink-0 sticky top-0 h-fit pt-8">
+                                                {socraticActiveSection && socraticQuestions[socraticActiveSection] ? (
+                                                    <div className="bg-white rounded-xl shadow-lg border border-purple-200 overflow-hidden">
+                                                        {/* Header */}
+                                                        <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-100">
+                                                            <div className="flex items-center justify-between">
+                                                                <h3 className="font-semibold text-purple-800 text-sm flex items-center gap-2">
+                                                                    🤔 {socraticActiveSection}
+                                                                </h3>
+                                                                <button
+                                                                    onClick={() => setSocraticActiveSection(null)}
+                                                                    className="text-gray-400 hover:text-gray-600 text-lg"
+                                                                >×</button>
+                                                            </div>
+                                                        </div>
+                                                        {/* Content */}
+                                                        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                                                            {/* Category Badge */}
+                                                            {socraticQuestions[socraticActiveSection].categoryLabel && (
+                                                                <div className="inline-block px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">
+                                                                    {socraticQuestions[socraticActiveSection].categoryLabel}
+                                                                </div>
+                                                            )}
+                                                            {/* Question */}
+                                                            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                                                                <p className="text-xs font-medium text-purple-700 mb-1">Question:</p>
+                                                                <p className="text-sm text-gray-800">{socraticQuestions[socraticActiveSection].question}</p>
+                                                            </div>
+
+                                                            {/* Initial Answer Input */}
+                                                            {socraticQuestions[socraticActiveSection].status === 'question_generated' && (
+                                                                <div className="space-y-2">
+                                                                    <textarea
+                                                                        value={socraticInputAnswer}
+                                                                        onChange={(e) => setSocraticInputAnswer(e.target.value)}
+                                                                        placeholder="Write your answer..."
+                                                                        className="w-full p-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                                                        rows={3}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => submitSocraticAnswer(false)}
+                                                                        disabled={!socraticInputAnswer.trim() || socraticIsFeedbackLoading}
+                                                                        className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
+                                                                    >
+                                                                        {socraticIsFeedbackLoading ? 'Getting feedback...' : 'Submit'}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Initial Answer Display */}
+                                                            {socraticQuestions[socraticActiveSection].initialAnswer && (
+                                                                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                                                    <p className="text-xs font-medium text-blue-700 mb-1">Your Answer:</p>
+                                                                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{socraticQuestions[socraticActiveSection].initialAnswer}</p>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Loading */}
+                                                            {socraticIsFeedbackLoading && (
+                                                                <div className="flex items-center justify-center py-3">
+                                                                    <div className="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin mr-2"></div>
+                                                                    <span className="text-sm text-gray-500">Analyzing...</span>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Feedback */}
+                                                            {socraticQuestions[socraticActiveSection].feedback && (
+                                                                <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                                                                    <p className="text-xs font-medium text-amber-700 mb-1">💡 Feedback:</p>
+                                                                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{socraticQuestions[socraticActiveSection].feedback}</p>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Revised Answer */}
+                                                            {(socraticQuestions[socraticActiveSection].status === 'feedback_received' ||
+                                                              socraticQuestions[socraticActiveSection].status === 'revised_answered') && (
+                                                                <div className="pt-2 border-t border-gray-200">
+                                                                    {socraticQuestions[socraticActiveSection].revisedAnswer ? (
+                                                                        <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                                                                            <p className="text-xs font-medium text-green-700 mb-1">✅ Revised Answer:</p>
+                                                                            <p className="text-sm text-gray-800 whitespace-pre-wrap">{socraticQuestions[socraticActiveSection].revisedAnswer}</p>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="space-y-2">
+                                                                            <p className="text-xs text-gray-500">Revise your answer (optional):</p>
+                                                                            <textarea
+                                                                                value={socraticRevisedAnswer}
+                                                                                onChange={(e) => setSocraticRevisedAnswer(e.target.value)}
+                                                                                placeholder="Revised answer..."
+                                                                                className="w-full p-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                                                                                rows={3}
+                                                                            />
+                                                                            <button
+                                                                                onClick={() => submitSocraticAnswer(true)}
+                                                                                disabled={!socraticRevisedAnswer.trim()}
+                                                                                className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
+                                                                            >
+                                                                                Submit Revision
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : socraticShowCategorySelector && socraticActiveSection ? (
+                                                    <div className="bg-white rounded-xl shadow-lg border border-purple-200 overflow-hidden">
+                                                        {/* Header */}
+                                                        <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-100">
+                                                            <div className="flex items-center justify-between">
+                                                                <h3 className="font-semibold text-purple-800 text-sm flex items-center gap-2">
+                                                                    🤔 {socraticActiveSection}
+                                                                </h3>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSocraticShowCategorySelector(false);
+                                                                        setSocraticActiveSection(null);
+                                                                    }}
+                                                                    className="text-gray-400 hover:text-gray-600 text-lg"
+                                                                >×</button>
+                                                            </div>
+                                                        </div>
+                                                        {/* Category Selection */}
+                                                        <div className="p-4">
+                                                            <p className="text-sm font-medium text-gray-700 mb-3">Select a question type:</p>
+                                                            <div className="space-y-2">
+                                                                {socraticCategories.map(cat => (
+                                                                    <button
+                                                                        key={cat.id}
+                                                                        onClick={() => setSocraticSelectedCategory(cat.id)}
+                                                                        className={`w-full text-left p-3 rounded-lg border transition-all ${
+                                                                            socraticSelectedCategory === cat.id
+                                                                                ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200'
+                                                                                : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="font-medium text-sm text-gray-800">{cat.label}</div>
+                                                                        <div className="text-xs text-gray-500 mt-1">{cat.description}</div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <button
+                                                                onClick={() => generateSocraticQuestion(socraticActiveSection, socraticSelectedCategory)}
+                                                                disabled={!socraticSelectedCategory}
+                                                                className="w-full mt-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                                                            >
+                                                                Generate Question
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : socraticIsGenerating ? (
+                                                    <div className="bg-white rounded-xl shadow-lg border border-purple-200 p-6 flex flex-col items-center">
+                                                        <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-3"></div>
+                                                        <p className="text-sm text-gray-600">Generating question...</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-6 text-center">
+                                                        <div className="text-3xl mb-3">🤔</div>
+                                                        <p className="text-sm font-medium text-purple-800 mb-1">Critical Thinking</p>
+                                                        <p className="text-xs text-gray-600">Click a ❓ button next to any section to generate a question</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Other conditions: centered paper */
+                                        <div className="w-full max-w-[900px] mx-auto p-12">
+                                            <div
+                                                id="paper-content"
+                                                className="prose max-w-none"
+                                                dangerouslySetInnerHTML={{ __html: paperContent || '<p>Loading paper...</p>' }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -2250,6 +3007,8 @@ Use markdown formatting for better readability:
                                     <button
                                         onClick={async () => {
                                             if (usedAiDuringReading) {
+                                                // Firebase saving disabled
+                                                /*
                                                 // Save AI usage directly to Firebase
                                                 try {
                                                     const userRef = window.firebaseDoc(window.firebaseDb, 'users', participantId);
@@ -2261,6 +3020,7 @@ Use markdown formatting for better readability:
                                                 } catch (error) {
                                                     console.error('Error saving AI usage:', error);
                                                 }
+                                                */
                                                 logEvent('ai_usage_reported', { usedAi: usedAiDuringReading });
                                                 setShowAiUsagePopup(false);
                                                 completeReading();
@@ -2278,6 +3038,8 @@ Use markdown formatting for better readability:
                                 </div>
                             </div>
                         )}
+
+                        {/* Socratic questions now shown inline in right margin */}
                     </div>
                 );
             }

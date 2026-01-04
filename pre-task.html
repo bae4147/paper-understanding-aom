@@ -132,8 +132,11 @@
                         throw new Error('Missing participantId');
                     }
 
+                    console.log('💾 Pre-task data:', preTaskData);
+
+                    // Firebase saving disabled
+                    /*
                     console.log('💾 Saving pre-task to:', `users/${participantId}/experiments/${experimentId}`);
-                    console.log('💾 Data:', preTaskData);
 
                     // Save to users/{participantId}/experiments/{experimentId}
                     const experimentRef = db.collection('users').doc(participantId).collection('experiments').doc(experimentId);
@@ -148,6 +151,7 @@
                     }, { merge: true });
 
                     console.log('✅ Pre-task saved successfully');
+                    */
 
                     // Navigate to main experiment
                     const params = new URLSearchParams({

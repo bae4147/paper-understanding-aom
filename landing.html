@@ -72,6 +72,8 @@
                 setIsLoading(true);
 
                 try {
+                    // Firebase checking disabled
+                    /*
                     // Step 1: Check if user exists and their status
                     const userRef = db.collection('users').doc(participantId);
                     const userDoc = await userRef.get();
@@ -126,6 +128,7 @@
                             }
                         }
                     }
+                    */
 
                     // Step 2: Participation is allowed - go to consent page
                     // Condition assignment is deferred until consent is given
