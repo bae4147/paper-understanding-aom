@@ -12,33 +12,36 @@
     <!-- Papers data -->
     <script src="papers-data.js"></script>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    <!-- Firebase SDK (compat — avoids ES module conflict with Babel standalone) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script>
+        firebase.initializeApp({
+            apiKey: "AIzaSyClsZXLxKOXjUtB5loTfz0__GpJ8AQYEas",
+            authDomain: "aom-paper-understanding.firebaseapp.com",
+            projectId: "aom-paper-understanding",
+            storageBucket: "aom-paper-understanding.firebasestorage.app",
+            messagingSenderId: "668607386746",
+            appId: "1:668607386746:web:dc6711c596542fe1b217c3"
+        });
+        const _db = firebase.firestore();
 
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-        apiKey: "AIzaSyClsZXLxKOXjUtB5loTfz0__GpJ8AQYEas",
-        authDomain: "aom-paper-understanding.firebaseapp.com",
-        projectId: "aom-paper-understanding",
-        storageBucket: "aom-paper-understanding.firebasestorage.app",
-        messagingSenderId: "668607386746",
-        appId: "1:668607386746:web:dc6711c596542fe1b217c3"
+        // Wrappers that match the modular API used in the React code
+        window.firebaseDb = _db;
+        window.firebaseDoc = function(db) {
+            var segments = Array.prototype.slice.call(arguments, 1);
+            var ref = db;
+            for (var i = 0; i < segments.length; i++) {
+                ref = i % 2 === 0 ? ref.collection(segments[i]) : ref.doc(segments[i]);
+            }
+            return ref;
         };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Make Firebase available globally
-        window.firebaseDb = db;
-        window.firebaseCollection = collection;
-        window.firebaseAddDoc = addDoc;
-        window.firebaseDoc = doc;
-        window.firebaseGetDoc = getDoc;
-        window.firebaseSetDoc = setDoc;
-        window.firebaseUpdateDoc = updateDoc;
-        window.firebaseServerTimestamp = serverTimestamp;
+        window.firebaseCollection = (db, path) => db.collection(path);
+        window.firebaseAddDoc = (ref, data) => ref.add(data);
+        window.firebaseGetDoc = (ref) => ref.get();
+        window.firebaseSetDoc = (ref, data, options) => options ? ref.set(data, options) : ref.set(data);
+        window.firebaseUpdateDoc = (ref, data) => ref.update(data);
+        window.firebaseServerTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
     </script>
 </head>
 <body>
