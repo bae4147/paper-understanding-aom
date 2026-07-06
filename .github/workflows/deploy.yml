@@ -24,25 +24,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject API Key into index.html
+      - name: Inject API Key into index.html and reviewer/reading.html
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "Before injection:"
-          grep "const apiKey" index.html || echo "Pattern not found"
+          for f in index.html reviewer/reading.html; do
+            echo "Before injection ($f):"
+            grep "const apiKey" "$f" || echo "Pattern not found"
 
-          # Use awk for safe replacement with special characters
-          awk -v key="$OPENAI_API_KEY" '{gsub(/__OPENAI_API_KEY__/, key); print}' index.html > index.html.tmp && mv index.html.tmp index.html
+            # Use awk for safe replacement with special characters
+            awk -v key="$OPENAI_API_KEY" '{gsub(/__OPENAI_API_KEY__/, key); print}' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
 
-          echo "After injection:"
-          grep "const apiKey" index.html || echo "Pattern not found"
-          echo "✅ API key injected into index.html"
+            echo "After injection ($f):"
+            grep "const apiKey" "$f" || echo "Pattern not found"
+          done
+          echo "✅ API key injected"
 
       - name: Verify injection
         run: |
-          if grep -q "__OPENAI_API_KEY__" index.html; then
+          if grep -rq "__OPENAI_API_KEY__" index.html reviewer/reading.html; then
             echo "❌ ERROR: API key placeholder still exists!"
-            grep -n "__OPENAI_API_KEY__" index.html
+            grep -n "__OPENAI_API_KEY__" index.html reviewer/reading.html
             exit 1
           else
             echo "✅ API key placeholder replaced successfully"
