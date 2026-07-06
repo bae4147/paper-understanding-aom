@@ -215,6 +215,15 @@
                             const doc = parser.parseFromString(html, 'text/html');
                             const proseDiv = doc.querySelector('.prose');
                             if (proseDiv) {
+                                // Image src values are written relative to the site root
+                                // (e.g. "papers_html/..."); this page lives one folder
+                                // deeper, so point them back up before injecting.
+                                proseDiv.querySelectorAll('img[src]').forEach(img => {
+                                    const src = img.getAttribute('src');
+                                    if (src && !/^(https?:)?\/\//.test(src) && !src.startsWith('../') && !src.startsWith('/')) {
+                                        img.setAttribute('src', '../' + src);
+                                    }
+                                });
                                 setPaperContent(proseDiv.innerHTML);
                             } else {
                                 setPaperContent('<p>Error: Could not find .prose element in paper</p>');
