@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study1 preview - Multimodal Reading Interface</title>
+    <title>Study1 Demo - Multimodal Reading Interface</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -1062,7 +1062,7 @@ Use markdown formatting for better readability:
                         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full">
                             <div className="text-center mb-8">
                                 <div className="text-5xl mb-4">📖</div>
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Study1 preview</h1>
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">Study1 Demo</h1>
                             </div>
 
                             <div className="space-y-6 mb-8">
@@ -1079,8 +1079,8 @@ Use markdown formatting for better readability:
 
                                 <div className="bg-gray-50 rounded-lg p-6">
                                     <h3 className="font-bold text-lg text-gray-800 mb-3">Condition</h3>
-                                    <div className="space-y-2">
-                                        <label className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <label className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors flex-1 ${
                                             condition === 'with_llm' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-100'
                                         }`}>
                                             <input
@@ -1092,11 +1092,11 @@ Use markdown formatting for better readability:
                                                 className="w-4 h-4 mt-0.5"
                                             />
                                             <span>
-                                                <span className="block font-medium text-gray-800">Control (chatbot only)</span>
-                                                <span className="block text-sm text-gray-500">AI chat assistant, no other resources.</span>
+                                                <span className="block font-medium text-gray-800">Control</span>
+                                                <span className="block text-sm text-gray-500">Chatbot only</span>
                                             </span>
                                         </label>
-                                        <label className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                        <label className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors flex-1 ${
                                             condition === 'with_llm_extended' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-100'
                                         }`}>
                                             <input
@@ -1108,8 +1108,8 @@ Use markdown formatting for better readability:
                                                 className="w-4 h-4 mt-0.5"
                                             />
                                             <span>
-                                                <span className="block font-medium text-gray-800">Multimodal (chatbot + video/podcast/infographic)</span>
-                                                <span className="block text-sm text-gray-500">AI chat plus video overview, audio podcast, infographic, and simplified text.</span>
+                                                <span className="block font-medium text-gray-800">Multimodal</span>
+                                                <span className="block text-sm text-gray-500">Chatbot + Video/Podcast/Infographic</span>
                                             </span>
                                         </label>
                                     </div>
@@ -1306,6 +1306,11 @@ Use markdown formatting for better readability:
                                 </p>
                             </div>
                             <div className="flex items-center space-x-4">
+                                <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                                    condition === 'with_llm_extended' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-700'
+                                }`}>
+                                    {condition === 'with_llm_extended' ? 'Multimodal' : 'Control'}
+                                </span>
                                 <button
                                     onClick={() => setShowFinishPopup(true)}
                                     className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
@@ -1462,7 +1467,7 @@ Use markdown formatting for better readability:
                         {showFinishPopup && (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                                 <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">Finish this preview?</h3>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">Do you want to finish reading?</h3>
                                     <div className="flex space-x-4">
                                         <button
                                             onClick={() => setShowFinishPopup(false)}
@@ -1495,14 +1500,14 @@ Use markdown formatting for better readability:
                             <div className="text-6xl mb-6">🎉</div>
                             <h1 className="text-4xl font-bold text-gray-800 mb-4">Thank You!</h1>
                             <p className="text-gray-600 mb-8">
-                                This concludes the Study1 preview of the multimodal reading interface. No data was collected.
+                                You have completed the demo. No data were collected.
                             </p>
 
                             <a
                                 href="index.html"
                                 className="inline-block px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-medium"
                             >
-                                Restart Preview
+                                Restart
                             </a>
                         </div>
                     </div>
